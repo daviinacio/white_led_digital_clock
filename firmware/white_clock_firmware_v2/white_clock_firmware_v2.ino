@@ -40,13 +40,10 @@ byte seven_seg_numbers [10] = {
   0b11110110  // 9
 };
 
-int display_dig_pins [8] = {
-  3, 2, 4, 5, 6, 7, 8, 9
-};
+// Display digits uses the PORTD
 
-int display_select_pins [4] = {
-  10, 11, 12, 13
-};
+int disp_sel_start = PB2;
+int disp_sel_end = PB5;
 
 byte displays_content [4] = {
   0x00, 0x00, 0x00, 0x00
@@ -58,18 +55,15 @@ void setup() {
 //  Wire.begin();
 //  Serial.begin(9600);
 
-  // Pinmode display pins
-  for(int i; i < (sizeof(display_dig_pins)/sizeof(*display_dig_pins)); i++){
-    pinMode(display_dig_pins[i], OUTPUT);
-    digitalWrite(display_dig_pins[i], HIGH);
-  }
+  // PinMode display digits pins
+  DDRD = B11111111;               // Set all PortD pins to output (0 - 7)
+  PORTD = B11111111;              // Set all PortD pins to HIGH=
 
-  for(int i; i < (sizeof(display_select_pins)/sizeof(*display_select_pins)); i++){
-    pinMode(display_select_pins[i], OUTPUT);
-    digitalWrite(display_select_pins[i], LOW);
-  }
+  // PinMode display select pins
+  DDRB = B00111100;               // Set pins 10, 11, 12, 13 to output and others to input
+  PORTB = B00000000;              // Set all PortB pins to LOW=
   
-//  RTC.begin();
+  // RTC.begin();
   if (! RTC.isrunning()) {
     Serial.println("RTC is NOT running!");
     // following line sets the RTC to the date & time this sketch was compiled
@@ -150,25 +144,6 @@ void loop() {
   display_update();
 }
 
-/* LEVEL 1 */
-/*void setDisplayNumber(int number){
-  for(int i = 0; i < (sizeof(display_dig_pins)/sizeof(*display_dig_pins)); i++)
-    digitalWrite(display_dig_pins[i], !((seven_seg_numbers[number] >> i) & 0x01));
-}
-
-void cleanDisplayNumber(){
-  for(int i = 0; i < (sizeof(display_dig_pins)/sizeof(*display_dig_pins)); i++)
-    digitalWrite(display_dig_pins[i], HIGH);
-}
-
-void setDisplayPosition(int current){
-  //display_current_pin++;
-  //display_current_pin = display_current_pin % (sizeof(display_select_pins)/sizeof(*display_select_pins));
-  
-  for(int i = 0; i < (sizeof(display_select_pins)/sizeof(*display_select_pins)); i++)
-    digitalWrite(display_select_pins[i], i == current);
-}*/
-
 /* Threads */
 void thread_rtc_loop(){
   now = RTC.now(); 
@@ -200,23 +175,23 @@ void thread_rtc_loop(){
 
 //ISR(TIMER2_COMPA_vect){
 void display_update(){
-  for(int dp = 0; dp < (sizeof(display_select_pins)/sizeof(*display_select_pins)); dp++){
+  for(int dp = 0; dp <= disp_sel_end - disp_sel_start; dp++){
 
     // Active the current digit of display
-    for(int i = 0; i < (sizeof(display_select_pins)/sizeof(*display_select_pins)); i++)
-      digitalWrite(display_select_pins[i], i == dp);
+    PORTB |= 0b00111100;                  // Puts pins PB2, PB3, PB4, PB5 to HIGH
+    PORTB ^= 0b00111100;                  // Toggle pins PB2, PB3, PB4, PB5 to LOW
+
+    PORTB ^= (1 << (disp_sel_start + dp));             // Toggle the current digit pin to HIGH
 
     // Set display content
-//    PORTD = displays_content[dp];
-    for(int i = 0; i < (sizeof(display_dig_pins)/sizeof(*display_dig_pins)); i++)
-      digitalWrite(display_dig_pins[i], !((displays_content[dp] >> i) & 0x01));    
+    PORTD ^= displays_content[dp];        // Sets the display content and uses ^= to invert the bits 
+                                          // (the display actives with LOW state)  
 
     // Time to stay on
     delayMicroseconds(map(display_brightness, 0, 100, 0, 1000));
 
     // Clean display
-    for(int i = 0; i < (sizeof(display_dig_pins)/sizeof(*display_dig_pins)); i++)
-      digitalWrite(display_dig_pins[i], HIGH);
+    PORTD = B11111111;                    // Sets all PORTD pins to HIGH
 
     // Time to stay off
     delayMicroseconds(map(display_brightness, 0, 100, 2500, 0));
