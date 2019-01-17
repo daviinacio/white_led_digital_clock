@@ -13,11 +13,11 @@ ThreadController controll_task = ThreadController();
 
 Thread thread_rtc = Thread();
 Thread thread_ldr = Thread();
-Thread thread_ir = Thread();
+//Thread thread_ir = Thread();
 Thread thread_dht = Thread();
-//Thread thread_display = Thread();
+Thread thread_display = Thread();
 
-int display_brightness = 0;
+int display_brightness = 100;
 
 RTC_DS1307 RTC;
 DateTime now;
@@ -26,6 +26,8 @@ DateTime now;
 //decode_results results;
 
 DHT dht(A0, DHTTYPE);
+
+int dht_temp = 0;
 
 byte seven_seg_numbers [10] = {
   0b11111100, // 0
@@ -49,53 +51,46 @@ byte displays_content [4] = {
   0x00, 0x00, 0x00, 0x00
 };
 
-//int display_current_pin = 0;
+int current_display_content = 0;        // 0 - 9
 
 void setup() {
-//  Wire.begin();
+  Wire.begin();
 //  Serial.begin(9600);
 
   // PinMode display digits pins
   DDRD = B11111111;               // Set all PortD pins to output (0 - 7)
-  PORTD = B11111111;              // Set all PortD pins to HIGH=
+  PORTD = B00000000;              // Set all PortD pins to HIGH
 
   // PinMode display select pins
   DDRB = B00111100;               // Set pins 10, 11, 12, 13 to output and others to input
-  PORTB = B00000000;              // Set all PortB pins to LOW=
-  
-  // RTC.begin();
-  if (! RTC.isrunning()) {
-    Serial.println("RTC is NOT running!");
-    // following line sets the RTC to the date & time this sketch was compiled
-    RTC.adjust(DateTime(__DATE__, __TIME__));
-  }
+  PORTB = B00000000;              // Set all PortB pins to LOW
 
   // RTC Thread config
   thread_rtc.onRun(thread_rtc_loop);
-  thread_rtc.setInterval(4000);
+  thread_rtc.setInterval(10000);
 
   // LDR Thread config
   thread_ldr.onRun(thread_ldr_read);
   thread_ldr.setInterval(100);
 
   // InfraRed Thread config
-  thread_ir.onRun(thread_ir_received);
-  thread_ir.setInterval(250);
+  //thread_ir.onRun(thread_ir_received);
+  //thread_ir.setInterval(250);
 
   // DHT11 Thread config
   thread_dht.onRun(thread_dht_read);
-  thread_dht.setInterval(5000);
+  thread_dht.setInterval(30000);
 
   // Display Thread config
-  //thread_display.onRun(thread_display_loop);
-  //thread_display.setInterval(1);
+  thread_display.onRun(thread_display_loop);
+  thread_display.setInterval(1000);
 
   // Add thread controll
   controll_task.add(&thread_rtc);
   controll_task.add(&thread_ldr);
-  controll_task.add(&thread_ir);
+  //controll_task.add(&thread_ir);
   controll_task.add(&thread_dht);
-  //controll_task.add(&thread_display);
+  controll_task.add(&thread_display);
 
   // Timer to multiplex
   /*cli();
@@ -111,9 +106,6 @@ void setup() {
   // enable timer compare interrupt
   TIMSK2 |= (1 << OCIE2A);
   sei();*/
-
-  // Read the first time
-  //thread_rtc_loop();
 
   //irrecv.enableIRIn(); // Start the receiver
 
@@ -134,6 +126,43 @@ void setup() {
   displays_content[1] = 0b11101110; // a
   displays_content[2] = 0b01111100; // v
   displays_content[3] = 0b00001100; // i
+
+  RTC.begin();
+  /*if (! RTC.isrunning()) {
+//    Serial.println("RTC is NOT running!");
+    // following line sets the RTC to the date & time this sketch was compiled
+//    RTC.adjust(DateTime(__DATE__, __TIME__));
+
+    displays_content[0] = 0b10011110; // e
+    displays_content[1] = 0b00001010; // r
+    displays_content[2] = 0b00001010; // r
+    displays_content[3] = 0b00111010; // o
+  }*/
+
+  while(!RTC.isrunning()){
+    if(millis()/1000 %3 >= 1){
+      displays_content[0] = 0b10011110; // e
+      displays_content[1] = 0b00001010; // r
+      displays_content[2] = 0b00001010; // r
+      displays_content[3] = 0b00111010; // o
+    } else {
+      displays_content[0] = 0x00; 
+      displays_content[1] = 0x00;
+      displays_content[2] = 0x00;
+      displays_content[3] = 0x00;
+    }
+
+    
+    display_update();
+  }
+
+  
+
+  // Read the first time
+  thread_rtc_loop();
+
+  // DHT fist read
+  thread_dht_read();
 }
 
 void loop() {
@@ -142,60 +171,127 @@ void loop() {
 //  displays_content[0] = seven_seg_numbers[millis() %10];
 
   display_update();
+
+  //digitalWrite(13, HIGH);
+  //digitalWrite(3, HIGH);
+  //PORTD ^= 0b11111111;
+  //delay(1000);
+  //digitalWrite(13, LOW);
+  //digitalWrite(3, LOW);
+  //PORTD ^= 0b11111111;
+  //delay(1000);
 }
 
 /* Threads */
 void thread_rtc_loop(){
   now = RTC.now(); 
 
-  displays_content[0] = seven_seg_numbers[now.hour() / 10];
-  displays_content[1] = seven_seg_numbers[now.hour() % 10];
-  displays_content[2] = seven_seg_numbers[now.minute() / 10];
-  displays_content[3] = seven_seg_numbers[now.minute() % 10];
+//  displays_content[0] = seven_seg_numbers[now.hour() / 10];
+//  displays_content[1] = seven_seg_numbers[now.hour() % 10];
+//  displays_content[2] = seven_seg_numbers[now.minute() / 10];
+//  displays_content[3] = seven_seg_numbers[now.minute() % 10];
+
+//  displays_content[0] = seven_seg_numbers[now.hour() / 10];
+//  displays_content[1] = seven_seg_numbers[now.hour() % 10];
+//  displays_content[2] = seven_seg_numbers[now.minute() / 10];
+//  displays_content[3] = seven_seg_numbers[now.minute() % 10];
 
   
-  Serial.print(now.day(), DEC);
-  Serial.print('/');
-  Serial.print(now.month(), DEC);
-  Serial.print('/');
-  Serial.print(now.year(), DEC);
-  Serial.print(' ');
-  Serial.print(now.hour(), DEC);
-  Serial.print(':');
-  Serial.print(now.minute(), DEC);
-  Serial.print(':');
-  Serial.print(now.second(), DEC);
-  Serial.println();
+//  Serial.print(now.day(), DEC);
+//  Serial.print('/');
+//  Serial.print(now.month(), DEC);
+//  Serial.print('/');
+//  Serial.print(now.year(), DEC);
+//  Serial.print(' ');
+//  Serial.print(now.hour(), DEC);
+//  Serial.print(':');
+//  Serial.print(now.minute(), DEC);
+//  Serial.print(':');
+//  Serial.print(now.second(), DEC);
+//  Serial.println();
 
-  //displays_content[0] = 0b10111110; // b
-  //displays_content[1] = 0b10111010; // o
-  //displays_content[2] = 0b10111010; // o
-  //displays_content[3] = 0b11100010; // t
+//  displays_content[0] = 0b10111110; // b
+//  displays_content[1] = 0b10111010; // o
+//  displays_content[2] = 0b10111010; // o
+//  displays_content[3] = 0b11100010; // t
 }
 
 //ISR(TIMER2_COMPA_vect){
 void display_update(){
   for(int dp = 0; dp <= disp_sel_end - disp_sel_start; dp++){
 
-    // Active the current digit of display
+    // Clean display
+    PORTD = B11111111;                    // Sets all PORTD pins to HIGH
+
     PORTB |= 0b00111100;                  // Puts pins PB2, PB3, PB4, PB5 to HIGH
     PORTB ^= 0b00111100;                  // Toggle pins PB2, PB3, PB4, PB5 to LOW
 
+    // Active the current digit of display
     PORTB ^= (1 << (disp_sel_start + dp));             // Toggle the current digit pin to HIGH
 
     // Set display content
     PORTD ^= displays_content[dp];        // Sets the display content and uses ^= to invert the bits 
-                                          // (the display actives with LOW state)  
+                                          // (the display actives with LOW state)
 
     // Time to stay on
     delayMicroseconds(map(display_brightness, 0, 100, 0, 1000));
 
-    // Clean display
     PORTD = B11111111;                    // Sets all PORTD pins to HIGH
 
     // Time to stay off
     delayMicroseconds(map(display_brightness, 0, 100, 2500, 0));
   }
+}
+
+void thread_display_loop(){
+  switch(current_display_content){
+    case 0:
+      break;
+      
+    case 1:
+      break;
+      
+    case 2:
+      break;
+      
+    case 3:
+      break;
+      
+    case 4:
+      displays_content[0] = seven_seg_numbers[now.hour() / 10];
+      displays_content[1] = seven_seg_numbers[now.hour() % 10];
+      displays_content[2] = seven_seg_numbers[now.minute() / 10];
+      displays_content[3] = seven_seg_numbers[now.minute() % 10];
+      break;
+      
+    case 5:
+      break;
+      
+    case 6:
+      if(dht_temp > 0){
+        displays_content[0] = seven_seg_numbers[dht_temp / 10];  // 0 - 9
+        displays_content[1] = seven_seg_numbers[dht_temp % 10];  // 0 - 9
+        displays_content[2] = 0b11000110;                 // °
+        displays_content[3] = 0b10011100;                 // C
+      }
+      break;
+      
+    case 7:
+      break;
+      
+    case 8:
+      displays_content[0] = seven_seg_numbers[now.hour() / 10];
+      displays_content[1] = seven_seg_numbers[now.hour() % 10];
+      displays_content[2] = seven_seg_numbers[now.minute() / 10];
+      displays_content[3] = seven_seg_numbers[now.minute() % 10];
+      break;
+
+    case 9:
+      break;
+  }
+
+  current_display_content++;
+  current_display_content = current_display_content%10;
 }
 
 /*void thread_display_loop(){
@@ -222,16 +318,22 @@ void display_update(){
 }*/
 
 void thread_ldr_read(){
-  display_brightness = map(analogRead(A2), 0, 1023, 0, 100);
+  display_brightness = map(analogRead(A2), 0, 800, 0, 100);
 
-  /*Serial.print("Display brightness: ");
-  Serial.print(display_brightness);
-  Serial.println('%');*/
+  if(display_brightness > 100)
+    display_brightness = 100;
+  else
+  if(display_brightness < 0)
+    display_brightness = 0; 
+
+//  Serial.print("Display brightness: ");
+//  Serial.print(display_brightness);
+//  Serial.println('%');
 }
 
-int c_ir_digit = 0;
+//int c_ir_digit = 0;
 
-void thread_ir_received(){
+//void thread_ir_received(){
   /*if (irrecv.decode(&results)) {
     Serial.println(results.value, HEX);
 
@@ -259,24 +361,24 @@ void thread_ir_received(){
 
     irrecv.resume(); // Receive the next value
   }*/
-}
+//}
 
 void thread_dht_read(){
-  long init_time_read = millis();
+//  long init_time_read = millis();
   
-  int t = dht.readTemperature();
+  dht_temp = dht.readTemperature();
   
-  if(t > 0){
-    Serial.print("Temperature: "); 
-    Serial.print(t);
-    Serial.println(" *C");
+//  if(t > 0){
+//    Serial.print("Temperature: "); 
+//    Serial.print(t);
+//    Serial.println(" *C");
   
-    displays_content[0] = seven_seg_numbers[t / 10];
-    displays_content[1] = seven_seg_numbers[t % 10];
-    displays_content[2] = 0b11000110; // °
-    displays_content[3] = 0b10011100; // C
+//    displays_content[0] = seven_seg_numbers[t / 10];
+//    displays_content[1] = seven_seg_numbers[t % 10];
+//    displays_content[2] = 0b11000110; // °
+//    displays_content[3] = 0b10011100; // C
   
-    Serial.print(millis() - init_time_read);
-    Serial.println("ms");
-  }
+//    Serial.print(millis() - init_time_read);
+//    Serial.println("ms");
+//  }
 }
