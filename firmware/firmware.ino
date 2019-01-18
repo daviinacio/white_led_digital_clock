@@ -1,25 +1,26 @@
+/*
+ * (c) daviapps 2019
+ * 
+ * 
+ * White LED Digital Clock 
+ * This is the firmware of a led digital clock (7 segments)
+ * 
+ * author: github.com/daviinacio
+ * date: 16/01/2019
+ * 
+ */
+
+
 #define DISP_BR_MAX 64
 #define DISP_BR_MIN 1
 #define DISP_BR_BUFFER_LENGTH 10
 #define DISP_BR_BUFFER_TIME 2000
 
 #define DISP_LENGTH 4
-#define DISP_PIN_INIT PB2
+#define DISP_PIN_FIRST PB2
+#define DISP_PIN_LAST PB5
 
-
-// Library imports
-#include <Thread.h>
-#include <ThreadController.h>
-
-// Threads
-ThreadController cpu = ThreadController();
-Thread thr_display = Thread();
-Thread thr_ldr = Thread();
-Thread thr_rtc = Thread();
-Thread thr_dht = Thread();
-Thread thr_panel = Thread();
-
-
+// Binary data
 byte seven_seg_numbers [10] = {
   0b11111100, // 0
   0b01100000, // 1
@@ -33,15 +34,28 @@ byte seven_seg_numbers [10] = {
   0b11110110  // 9
 };
 
+// Library imports
+#include <Thread.h>
+#include <ThreadController.h>
+
+// Threads
+ThreadController cpu = ThreadController();
+Thread thr_main = Thread();
+Thread thr_ldr = Thread();
+//Thread thr_rtc = Thread();
+//Thread thr_dht = Thread();
+//Thread thr_panel = Thread();
+
 // Display
-byte disp_content [DISP_BR_BUFFER_LENGTH];
+byte disp_content [DISP_LENGTH];
 
-int disp_digit = 0;
-
-int disp_brightness = 0;
+int disp_brightness = DISP_BR_MIN;
 int disp_brightness_buffer[DISP_BR_BUFFER_LENGTH];
 
 int disp_count = 0; 
+int disp_digit = 0;
+
+int debug_thread_loop_tester = 0;
 
 void setup() {
 
@@ -56,8 +70,8 @@ void setup() {
   /*    *    *    THREADS    *    *    */
 
   // Initialize threads
-  thr_display.onRun(thr_display_func);
-  thr_display.setInterval(1000);
+  thr_main.onRun(thr_main_func);
+  thr_main.setInterval(1000);
 
   thr_ldr.onRun(thr_ldr_func);
   thr_ldr.setInterval(DISP_BR_BUFFER_TIME / DISP_BR_BUFFER_LENGTH);
@@ -73,7 +87,7 @@ void setup() {
 
 
   // Add thread controll
-  cpu.add(&thr_display);
+  cpu.add(&thr_main);
   cpu.add(&thr_ldr);
 
   /*    *    ATMEGA TIMER1    *    */
@@ -102,10 +116,11 @@ void setup() {
 }
 
 void loop() {
+  // Run the main thread controller
   cpu.run();
 
   // DEBUG
-  int toshow = disp_brightness;
+  int toshow = debug_thread_loop_tester;
 
   disp_content[0] = ((toshow / 1000) % 10) > 0 || toshow >= 10000 ? seven_seg_numbers[(toshow / 1000) % 10] : 0x00;
   disp_content[1] = ((toshow / 100) % 10) > 0 || toshow >= 1000 ? seven_seg_numbers[(toshow / 100) % 10] : 0x00;
@@ -114,11 +129,12 @@ void loop() {
 }
 
 /*    *    *    *    THREAD    *    *    *    */
-void thr_display_func() {
-  
+void thr_main_func() {
+  debug_thread_loop_tester++;
 }
 
 void thr_ldr_func(){
+  // Make the ldr sensor read
   int br_read = map(analogRead(A2), 50, 800, DISP_BR_MIN, DISP_BR_MAX);
 
   // Avoid out of range problems
@@ -126,9 +142,9 @@ void thr_ldr_func(){
   if(br_read < DISP_BR_MIN) br_read = DISP_BR_MIN;
 
   // Avoid first read problems
-  //if(disp_br_average_calc == 0)
-  //  for(int i = 0; i < DISP_BR_BUFFER_LENGTH; i++)
-  //    disp_brightness_buffer[i] = br_read;
+  if(disp_br_average_calc() == 0)
+    for(int i = 0; i < DISP_BR_BUFFER_LENGTH; i++)
+      disp_brightness_buffer[i] = br_read;
 
   // Move the buffer to side
   for(int i = DISP_BR_BUFFER_LENGTH - 2; i >= 0; i--)
@@ -137,32 +153,36 @@ void thr_ldr_func(){
   // Insert the new value on buffer
   disp_brightness_buffer[0] = br_read;
 
+  // Put the buffer average to the brightness variable
   disp_brightness = disp_br_average_calc();
 }
 
 int disp_br_average_calc(){
   int sum = 0;
 
+  // Sum all buffer value
   for(int i = 0; i < DISP_BR_BUFFER_LENGTH; i++)
     sum += disp_brightness_buffer[i];
 
+  // Divide the buffer sum per buffer length
   return sum / DISP_BR_BUFFER_LENGTH;
 }
 
 /*    *    *    *    TIMER1    *    *    *    */
 ISR(TIMER1_COMPA_vect) {
+  // Restart the TIMER1
   TCNT1 = 0;
 
   // Clean display
-  PORTD = B11111111;                            // Sets all PORTD pins to HIGH
+  PORTD = 0xff;                                   // Sets all PORTD pins to HIGH
 
-  // 
+  // Brightness control
   if((disp_count/DISP_LENGTH) < disp_brightness){
     PORTB |= 0b00111100;                          // Puts pins PB2, PB3, PB4, PB5 to HIGH
     PORTB ^= 0b00111100;                          // Toggle pins PB2, PB3, PB4, PB5 to LOW
   
     // Active the current digit of display
-    PORTB ^= (1 << DISP_PIN_INIT + disp_digit);   // Toggle the current digit pin to HIGH
+    PORTB ^= (1 << DISP_PIN_FIRST + disp_digit);   // Toggle the current digit pin to HIGH
   
     // Set display content
     PORTD ^= disp_content[disp_digit];            // Sets the display content and uses ^= to invert the bits
@@ -173,7 +193,7 @@ ISR(TIMER1_COMPA_vect) {
   disp_digit++;
   disp_digit %= DISP_LENGTH;
 
-  // Increment the current brightness loop counter
+  // Increment the brightness loop counter
   disp_count++;
   disp_count %= DISP_BR_MAX * DISP_LENGTH;
 }
