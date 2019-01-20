@@ -9,9 +9,11 @@
  * 
  */
 
+#define LDR_PIN A2
+
 #define DISP_BR_MAX 64
 #define DISP_BR_MIN 1
-#define DISP_BR_BUFFER_LENGTH 10
+#define DISP_BR_BUFFER_LENGTH 16
 #define DISP_BR_BUFFER_INTERVAL 2000
 
 #define DISP_LENGTH 4
@@ -22,8 +24,10 @@
 
 #define RTC_INTERVAL 2000
 
+#define DHT_PIN A0
+#define DHT_TYPE DHT11
 #define DHT_BUFFER_LENGTH 4
-#define DHT_BUFFER_INTERVAL 60000
+#define DHT_BUFFER_INTERVAL 10000
 
 // Binary data
 byte seven_seg_numbers [10] = {
@@ -46,12 +50,16 @@ byte seven_seg_numbers [10] = {
 #include <Wire.h>
 #include "RTClib.h"
 
+//#include "DHT.h"
+#include <SimpleDHT.h>
+
+
 // Threads
 ThreadController cpu = ThreadController();
 Thread thr_main = Thread();
 Thread thr_ldr = Thread();
 Thread thr_rtc = Thread();
-//Thread thr_dht = Thread();
+Thread thr_dht = Thread();
 //Thread thr_panel = Thread();
 
 // Display
@@ -68,8 +76,11 @@ RTC_DS1307 rtc;
 DateTime rtc_now;
 
 // DHT
-int dht_temp = 0;
-int dht_hum = 0;
+//DHT dht(DHT_PIN, DHT_TYPE);
+SimpleDHT11 dht(DHT_PIN);
+
+byte dht_temp = 0x00;
+byte dht_hum = 0x00;
 
 int dht_temp_buffer[DHT_BUFFER_LENGTH];
 int dht_hum_buffer[DHT_BUFFER_LENGTH];
@@ -118,17 +129,18 @@ void setup() {
   thr_rtc.onRun(thr_rtc_func);
   thr_rtc.setInterval(RTC_INTERVAL);
 
-  //thr_dht.onRun();
-  //thr_dht.setInterval();
+  thr_dht.onRun(thr_dht_func);
+  thr_dht.setInterval(DHT_BUFFER_INTERVAL / DHT_BUFFER_LENGTH);
 
   //thr_panel.onRun(thread_panel_loop);
   //thr_panel.setInterval(1000);
 
 
-  // Add thread controll
+  // Add thread to thead controll
   cpu.add(&thr_main);
   cpu.add(&thr_ldr);
   cpu.add(&thr_rtc);
+  cpu.add(&thr_dht);
 
   /*    *  LIBRARY BEGINNERS  *    */
 
@@ -159,6 +171,11 @@ void setup() {
     }
   }
 
+  /*    *   THREAD FIRST RUN  *    */
+  thr_ldr_func();
+  thr_rtc_func();
+  //thr_dht_func();
+
   /*    *     END OF BOOT     *    */
 
   disp_content[0] = 0b01111010; // d
@@ -172,12 +189,14 @@ void loop() {
   cpu.run();
 
   // DEBUG
-  //int toshow = debug_thread_loop_tester;
+  //int toshow = dht_temp;
 
   //disp_content[0] = ((toshow / 1000) % 10) > 0 || toshow >= 10000 ? seven_seg_numbers[(toshow / 1000) % 10] : 0x00;
   //disp_content[1] = ((toshow / 100) % 10) > 0 || toshow >= 1000 ? seven_seg_numbers[(toshow / 100) % 10] : 0x00;
   //disp_content[2] = ((toshow / 10) % 10) > 0 || toshow >= 100 ? seven_seg_numbers[(toshow / 10) % 10] : 0x00;;
   //disp_content[3] = seven_seg_numbers[(toshow       ) % 10];
+
+  disp_update();
 }
 
 /*    *    *    *    THREAD    *    *    *    */
@@ -188,7 +207,7 @@ void thr_main_func() {
 
 void thr_ldr_func(){
   // Make the ldr sensor read
-  int br_read = map(analogRead(A2), 50, 800, DISP_BR_MIN, DISP_BR_MAX);
+  int br_read = map(analogRead(LDR_PIN), 0, 650, DISP_BR_MIN, DISP_BR_MAX);
 
   // Avoid out of range problems
   if(br_read > DISP_BR_MAX) br_read = DISP_BR_MAX; else
@@ -213,10 +232,32 @@ void thr_ldr_func(){
 void thr_rtc_func(){
   rtc_now = rtc.now(); 
 
-  disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];
-  disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];
-  disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];
-  disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];
+  //disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];
+  //disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];
+  //disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];
+  //disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];
+}
+
+void thr_dht_func(){
+  //dht_temp = dht.readTemperature();
+
+  int err = SimpleDHTErrSuccess;
+  if ((err = dht.read(&dht_temp, &dht_hum, NULL)) != SimpleDHTErrSuccess) {
+    disp_content[0] = 0b10011110; // e
+    disp_content[1] = 0b00001010; // r
+    disp_content[2] = seven_seg_numbers[err / 10]; // 0 - 9
+    disp_content[3] = seven_seg_numbers[err % 10]; // 0 - 9
+    return;
+  }
+
+  disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];  // 0 - 9
+  disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];  // 0 - 9
+  disp_content[2] = 0b11000110;                 // °
+  disp_content[3] = 0b10011100;                 // C
+  
+  //Serial.print((int)temperature); Serial.print(" *C, "); 
+  //Serial.print((int)humidity); Serial.println(" H");
+  
 }
 
 /*    *    * INPUT BUFFER AVERAGES *    *    */
@@ -235,7 +276,13 @@ int dht_hum_average_calc(){
 
 /*    *    *    *    TIMER1    *    *    *    */
 
+void disp_update(){
+//ISR(TIMER1_COMPA_vect) {
+}
+
 ISR(TIMER1_COMPA_vect) {
+//void disp_update(){
+
   // Restart the TIMER1
   TCNT1 = 0;
 
