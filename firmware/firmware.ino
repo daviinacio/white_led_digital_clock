@@ -22,7 +22,7 @@
 
 #define MAIN_INTERVAL 1000
 
-#define RTC_INTERVAL 2000
+#define RTC_INTERVAL 4000
 
 #define DHT_PIN A0
 #define DHT_TYPE DHT11
@@ -50,8 +50,9 @@ byte seven_seg_numbers [10] = {
 #include <Wire.h>
 #include "RTClib.h"
 
-//#include "DHT.h"
-#include <SimpleDHT.h>
+#include "DHT.h"
+//#include <SimpleDHT.h>
+
 
 
 // Threads
@@ -76,11 +77,10 @@ RTC_DS1307 rtc;
 DateTime rtc_now;
 
 // DHT
-//DHT dht(DHT_PIN, DHT_TYPE);
-SimpleDHT11 dht(DHT_PIN);
+DHT dht;
 
-byte dht_temp = 0x00;
-byte dht_hum = 0x00;
+float dht_temp = 0;
+float dht_hum = 0;
 
 int dht_temp_buffer[DHT_BUFFER_LENGTH];
 int dht_hum_buffer[DHT_BUFFER_LENGTH];
@@ -89,6 +89,8 @@ int dht_hum_buffer[DHT_BUFFER_LENGTH];
 int debug_thread_loop_tester = 0;
 
 void setup() {
+  // Restart the TIMER2
+  TCNT2 = 0;
 
   /*    *    *    PIN MODE   *    *    */
   
@@ -100,22 +102,22 @@ void setup() {
   DDRB = B00111100;               // Set pins 10, 11, 12, 13 to output and others to input
   PORTB = 0x00;                   // Set all PortB pins to LOW
 
-  /*    *    ATMEGA TIMER1    *    */
+  /*    *    ATMEGA TIMER2    *    */
+  
+  // Turn on CTC mode
+  TCCR2A = 0x00;
+  TCCR2A |= (1 << WGM21);
 
-  // Modo de Comparação
-  TCCR1A = 0;
+  // Set CS21 bit for 8 prescaler
+  TCCR2B = 0x00;
+  TCCR2B |= (1 << CS21);
 
-  // Prescaler 1:256
-  TCCR1B |=  (1 << CS12);
-  TCCR1B &= ~(1 << CS11);
-  TCCR1B &= ~(1 << CS10);
-
-  // Inicializa Registradores
-  TCNT1 = 0;
-  OCR1A = 2;
-
-  // Habilita Interrupção do Timer1
-  TIMSK1 = (1 << OCIE1A);
+  // Initialize Registers
+  TCNT2  = 0;
+  OCR2A = 128;
+  
+  // Enable to TIMER2 Interrupt
+  TIMSK2 |= (1 << OCIE2A);
 
   /*    *    *  THREADS  *    *    */
 
@@ -146,7 +148,7 @@ void setup() {
 
   Wire.begin();
   rtc.begin();
-  //dht.begin();
+  dht.setup(DHT_PIN);
 
   /*    *   CHECK COMPONENTS  *    */
 
@@ -174,7 +176,7 @@ void setup() {
   /*    *   THREAD FIRST RUN  *    */
   thr_ldr_func();
   thr_rtc_func();
-  //thr_dht_func();
+  thr_dht_func();
 
   /*    *     END OF BOOT     *    */
 
@@ -189,20 +191,19 @@ void loop() {
   cpu.run();
 
   // DEBUG
-  //int toshow = dht_temp;
+//  int toshow = debug_thread_loop_tester;
+//
+//  disp_content[0] = ((toshow / 1000) % 10) > 0 || toshow >= 10000 ? seven_seg_numbers[(toshow / 1000) % 10] : 0x00;
+//  disp_content[1] = ((toshow / 100) % 10) > 0 || toshow >= 1000 ? seven_seg_numbers[(toshow / 100) % 10] : 0x00;
+//  disp_content[2] = ((toshow / 10) % 10) > 0 || toshow >= 100 ? seven_seg_numbers[(toshow / 10) % 10] : 0x00;;
+//  disp_content[3] = seven_seg_numbers[(toshow       ) % 10];
 
-  //disp_content[0] = ((toshow / 1000) % 10) > 0 || toshow >= 10000 ? seven_seg_numbers[(toshow / 1000) % 10] : 0x00;
-  //disp_content[1] = ((toshow / 100) % 10) > 0 || toshow >= 1000 ? seven_seg_numbers[(toshow / 100) % 10] : 0x00;
-  //disp_content[2] = ((toshow / 10) % 10) > 0 || toshow >= 100 ? seven_seg_numbers[(toshow / 10) % 10] : 0x00;;
-  //disp_content[3] = seven_seg_numbers[(toshow       ) % 10];
-
-  disp_update();
 }
 
 /*    *    *    *    THREAD    *    *    *    */
 
 void thr_main_func() {
-  
+  debug_thread_loop_tester++;
 }
 
 void thr_ldr_func(){
@@ -232,31 +233,52 @@ void thr_ldr_func(){
 void thr_rtc_func(){
   rtc_now = rtc.now(); 
 
-  //disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];
-  //disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];
-  //disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];
-  //disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];
+  disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];
+  disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];
+  disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];
+  disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];
 }
 
 void thr_dht_func(){
-  //dht_temp = dht.readTemperature();
+  T2_disable();
+  float dht_temp_read = dht.getTemperature();
+  float dht_hum_read = dht.getHumidity();
+  T2_enable();
 
-  int err = SimpleDHTErrSuccess;
-  if ((err = dht.read(&dht_temp, &dht_hum, NULL)) != SimpleDHTErrSuccess) {
-    disp_content[0] = 0b10011110; // e
-    disp_content[1] = 0b00001010; // r
-    disp_content[2] = seven_seg_numbers[err / 10]; // 0 - 9
-    disp_content[3] = seven_seg_numbers[err % 10]; // 0 - 9
-    return;
-  }
+  // Avoid first read problems
+  if(dht_temp_average_calc() == 0)
+    for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
+      dht_temp_buffer[i] = dht_temp_read;
 
-  disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];  // 0 - 9
-  disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];  // 0 - 9
-  disp_content[2] = 0b11000110;                 // °
-  disp_content[3] = 0b10011100;                 // C
-  
-  //Serial.print((int)temperature); Serial.print(" *C, "); 
-  //Serial.print((int)humidity); Serial.println(" H");
+  if(dht_hum_average_calc() == 0)
+    for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
+      dht_hum_buffer[i] = dht_hum_read;
+
+  // Move the buffer to side
+  for(int i = DHT_BUFFER_LENGTH - 2; i >= 0; i--)
+      dht_temp_buffer[i + 1] = dht_temp_buffer[i];
+
+  for(int i = DHT_BUFFER_LENGTH - 2; i >= 0; i--)
+      dht_hum_buffer[i + 1] = dht_hum_buffer[i];
+      
+  // Insert the new value on buffer
+  dht_temp_buffer[0] = dht_temp_read;
+  dht_hum_buffer[0] = dht_hum_read;
+
+  // Put the buffer average to the brightness variable
+  dht_temp = dht_temp_average_calc();
+  dht_hum = dht_hum_average_calc();
+
+
+  disp_content[0] = 0b01101110;               // H
+  disp_content[1] = 0x00;                     // 
+  disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];  // 0 - 9
+  disp_content[3] = seven_seg_numbers[((int) dht_hum) % 10];  // 0 - 9
+
+  //disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];  // 0 - 9
+  //disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];  // 0 - 9
+  //disp_content[2] = 0b11000110;                 // °
+  //disp_content[3] = 0b10011100;                 // C
   
 }
 
@@ -266,25 +288,16 @@ int disp_br_average_calc(){
   return buffer_average_calc(disp_brightness_buffer, DISP_BR_BUFFER_LENGTH);
 }
 
-int dht_temp_average_calc(){
-  //return buffer_average_calc( , );
+float dht_temp_average_calc(){
+  return buffer_average_calc(dht_temp_buffer, DHT_BUFFER_LENGTH);
 }
 
-int dht_hum_average_calc(){
-  //return buffer_average_calc( , );
+float dht_hum_average_calc(){
+  return buffer_average_calc(dht_hum_buffer , DHT_BUFFER_LENGTH);
 }
 
-/*    *    *    *    TIMER1    *    *    *    */
-
-void disp_update(){
-//ISR(TIMER1_COMPA_vect) {
-}
-
-ISR(TIMER1_COMPA_vect) {
-//void disp_update(){
-
-  // Restart the TIMER1
-  TCNT1 = 0;
+/*    *    *    *    TIMER2    *    *    *    */
+ISR(TIMER2_COMPA_vect){
 
   // Clean display
   PORTD = 0xff;                                   // Sets all PORTD pins to HIGH
@@ -309,6 +322,15 @@ ISR(TIMER1_COMPA_vect) {
   // Increment the brightness loop counter
   disp_count++;
   disp_count %= DISP_BR_MAX * DISP_LENGTH;
+}
+
+void T2_enable(){
+  TIMSK2 |= (1 << OCIE2A); // enable timer compare interrupt
+}
+
+void T2_disable(){
+  TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
+  PORTD = 0xff;             // Clean display
 }
 
 
