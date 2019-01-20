@@ -21,13 +21,19 @@
 #define DISP_PIN_LAST PB5
 
 #define MAIN_INTERVAL 1000
+//#define MAIN_SCREEN_LENGTH 
+#define MAIN_SCREEN_HOME 0
+#define MAIN_SCREEN_LDR 1
 
 #define RTC_INTERVAL 4000
 
 #define DHT_PIN A0
 #define DHT_TYPE DHT11
-#define DHT_BUFFER_LENGTH 4
-#define DHT_BUFFER_INTERVAL 10000
+#define DHT_BUFFER_LENGTH 6
+#define DHT_BUFFER_INTERVAL 60000
+
+#define IR_PIN A1
+#define IR_INTERVAL 100
 
 // Binary data
 byte seven_seg_numbers [10] = {
@@ -51,9 +57,8 @@ byte seven_seg_numbers [10] = {
 #include "RTClib.h"
 
 #include "DHT.h"
-//#include <SimpleDHT.h>
 
-
+#include <IRremote.h>
 
 // Threads
 ThreadController cpu = ThreadController();
@@ -61,6 +66,7 @@ Thread thr_main = Thread();
 Thread thr_ldr = Thread();
 Thread thr_rtc = Thread();
 Thread thr_dht = Thread();
+Thread thr_ir = Thread();
 //Thread thr_panel = Thread();
 
 // Display
@@ -84,6 +90,15 @@ float dht_hum = 0;
 
 int dht_temp_buffer[DHT_BUFFER_LENGTH];
 int dht_hum_buffer[DHT_BUFFER_LENGTH];
+
+// IR Remore
+IRrecv ir_recv(IR_PIN);
+decode_results ir_results;
+
+int c_ir_digit = 0;
+
+// Main
+int main_current_screen = 0;
 
 // DEBUG
 int debug_thread_loop_tester = 0;
@@ -134,6 +149,9 @@ void setup() {
   thr_dht.onRun(thr_dht_func);
   thr_dht.setInterval(DHT_BUFFER_INTERVAL / DHT_BUFFER_LENGTH);
 
+  thr_ir.onRun(thr_ir_func);
+  thr_ir.setInterval(IR_INTERVAL);
+
   //thr_panel.onRun(thread_panel_loop);
   //thr_panel.setInterval(1000);
 
@@ -143,12 +161,14 @@ void setup() {
   cpu.add(&thr_ldr);
   cpu.add(&thr_rtc);
   cpu.add(&thr_dht);
-
+  cpu.add(&thr_ir);
+  
   /*    *  LIBRARY BEGINNERS  *    */
 
   Wire.begin();
   rtc.begin();
   dht.setup(DHT_PIN);
+  ir_recv.enableIRIn();
 
   /*    *   CHECK COMPONENTS  *    */
 
@@ -184,6 +204,9 @@ void setup() {
   disp_content[1] = 0b11101110; // a
   disp_content[2] = 0b01111100; // v
   disp_content[3] = 0b00001100; // i
+
+  //thr_ldr.enabled = false;
+  //disp_brightness = DISP_BR_MAX;
 }
 
 void loop() {
@@ -191,7 +214,7 @@ void loop() {
   cpu.run();
 
   // DEBUG
-//  int toshow = debug_thread_loop_tester;
+//  int toshow = disp_brightness;
 //
 //  disp_content[0] = ((toshow / 1000) % 10) > 0 || toshow >= 10000 ? seven_seg_numbers[(toshow / 1000) % 10] : 0x00;
 //  disp_content[1] = ((toshow / 100) % 10) > 0 || toshow >= 1000 ? seven_seg_numbers[(toshow / 100) % 10] : 0x00;
@@ -203,7 +226,7 @@ void loop() {
 /*    *    *    *    THREAD    *    *    *    */
 
 void thr_main_func() {
-  debug_thread_loop_tester++;
+//  debug_thread_loop_tester++;
 }
 
 void thr_ldr_func(){
@@ -233,10 +256,10 @@ void thr_ldr_func(){
 void thr_rtc_func(){
   rtc_now = rtc.now(); 
 
-  disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];
-  disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];
-  disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];
-  disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];
+//  disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];
+//  disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];
+//  disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];
+//  disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];
 }
 
 void thr_dht_func(){
@@ -270,16 +293,70 @@ void thr_dht_func(){
   dht_hum = dht_hum_average_calc();
 
 
-  disp_content[0] = 0b01101110;               // H
-  disp_content[1] = 0x00;                     // 
-  disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];  // 0 - 9
-  disp_content[3] = seven_seg_numbers[((int) dht_hum) % 10];  // 0 - 9
+//  disp_content[0] = 0b01101110;               // H
+//  disp_content[1] = 0x00;                     // 
+//  disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];  // 0 - 9
+//  disp_content[3] = seven_seg_numbers[((int) dht_hum) % 10];  // 0 - 9
 
   //disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];  // 0 - 9
   //disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];  // 0 - 9
   //disp_content[2] = 0b11000110;                 // °
   //disp_content[3] = 0b10011100;                 // C
   
+}
+
+void thr_ir_func(){
+  if (ir_recv.decode(&ir_results)) {
+
+    byte disp_content_old[DISP_LENGTH];
+    for(int i = 0; i < DISP_LENGTH; i++)
+      disp_content_old[i] = disp_content[i];
+      
+
+    for(int i = DISP_LENGTH - 2; i >= 0; i--)
+      disp_content[i + 1] = disp_content[i];
+    
+    switch(ir_results.value){
+      case 0xB9F56762: disp_content[0] = seven_seg_numbers[0]; break; // 0
+      case 0xE13DDA28: disp_content[0] = seven_seg_numbers[1]; break; // 1
+      case 0xAD586662: disp_content[0] = seven_seg_numbers[2]; break; // 2
+      case 0x273009C4: disp_content[0] = seven_seg_numbers[3]; break; // 3
+      case 0xF5999288: disp_content[0] = seven_seg_numbers[4]; break; // 4
+      case 0x731A3E02: disp_content[0] = seven_seg_numbers[5]; break; // 5
+      case 0x2C452C6C: disp_content[0] = seven_seg_numbers[6]; break; // 6
+      case 0x4592E14C: disp_content[0] = seven_seg_numbers[7]; break; // 7
+      case 0x6825E53E: disp_content[0] = seven_seg_numbers[8]; break; // 8
+      case 0x8B8510E8: disp_content[0] = seven_seg_numbers[9]; break; // 9
+      
+      case 0x52A5A66: disp_content[0] = 0x00; break; // Clear
+      //case 0xCA8CBCC6: c_ir_digit = 3; break; // Back to home
+
+      case 0xCA8CBCC6:
+        disp_content[0] = 0b01111010; // d
+        disp_content[1] = 0b11101110; // a
+        disp_content[2] = 0b01111100; // v
+        disp_content[3] = 0b00001100; // i
+        break;
+
+      default:
+        for(int i = 0; i < DISP_LENGTH; i++)
+          disp_content[i] = disp_content_old[i];
+        break;
+    };
+
+    switch(ir_results.value){
+      case 0x68733A46: disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Brightness ++
+      case 0x83B19366: disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Brightness --
+    }
+
+    //if(disp_brightness > DISP_BR_MAX) disp_brightness = DISP_BR_MAX; else
+    //if(disp_brightness < 8) disp_brightness = 8;
+
+    //c_ir_digit++;
+    //c_ir_digit %= DISP_LENGTH;
+
+    ir_recv.resume(); // Receive the next value
+  }
 }
 
 /*    *    * INPUT BUFFER AVERAGES *    *    */
