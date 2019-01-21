@@ -20,7 +20,7 @@
 #define DISP_PIN_FIRST PB2
 #define DISP_PIN_LAST PB5
 
-#define MAIN_INTERVAL 1000
+#define MAIN_INTERVAL 100
 //#define MAIN_SCREEN_LENGTH 
 #define MAIN_SCREEN_HOME 0
 #define MAIN_SCREEN_LDR 1
@@ -29,7 +29,7 @@
 
 #define DHT_PIN A0
 #define DHT_TYPE DHT11
-#define DHT_BUFFER_LENGTH 6
+#define DHT_BUFFER_LENGTH 4
 #define DHT_BUFFER_INTERVAL 60000
 
 #define IR_PIN A1
@@ -95,10 +95,8 @@ int dht_hum_buffer[DHT_BUFFER_LENGTH];
 IRrecv ir_recv(IR_PIN);
 decode_results ir_results;
 
-int c_ir_digit = 0;
-
 // Main
-int main_current_screen = 0;
+int main_current_screen = MAIN_SCREEN_HOME;
 
 // DEBUG
 int debug_thread_loop_tester = 0;
@@ -129,7 +127,7 @@ void setup() {
 
   // Initialize Registers
   TCNT2  = 0;
-  OCR2A = 128;
+  OCR2A = 96;
   
   // Enable to TIMER2 Interrupt
   TIMSK2 |= (1 << OCIE2A);
@@ -226,7 +224,46 @@ void loop() {
 /*    *    *    *    THREAD    *    *    *    */
 
 void thr_main_func() {
-//  debug_thread_loop_tester++;
+  long m = millis();
+  
+  switch(main_current_screen){
+    case MAIN_SCREEN_HOME:
+      // Initial interval
+      if(m <= 2000){ /* Do nothing */ } else
+      
+      // Temperature
+      if(m / 2000 % 10 == 8){       // Each 20s, runs on 16s, per 2s
+        disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];   // 0 - 9
+        disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];   // 0 - 9
+        disp_content[2] = 0b11000110;                                 // °
+        disp_content[3] = 0b10011100;                                 // C
+      } else
+      
+      // Humidity
+      if(m / 2000 % 10 == 9){       // Each 20s, runs on 18s, per 2s
+        disp_content[0] = 0b01101110;                                 // H
+        disp_content[1] = 0x00;                                       // null
+        disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];    // 0 - 9
+        disp_content[3] = seven_seg_numbers[((int) dht_hum) % 10];    // 0 - 9
+      }
+      
+      // Hours and Minutes
+      else {                        // Runs when others 'IFs' are false
+        disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];     // 0 - 9
+        disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];     // 0 - 9
+        disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];   // 0 - 9
+        disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];   // 0 - 9
+      }
+      break;
+
+    case MAIN_SCREEN_LDR:
+      int l = disp_brightness;
+      disp_content[0] = 0b00111110;   // b
+      disp_content[1] = 0b00001010;   // r
+      disp_content[2] = ((l / 10) % 10) > 0 || l >= 100 ? seven_seg_numbers[(l / 10) % 10] : 0x00;
+      disp_content[3] = ((l / 1) % 10) > 0 || l >= 10 ? seven_seg_numbers[(l / 1) % 10] : 0x00;;
+      break;
+  }
 }
 
 void thr_ldr_func(){
@@ -254,12 +291,7 @@ void thr_ldr_func(){
 }
 
 void thr_rtc_func(){
-  rtc_now = rtc.now(); 
-
-//  disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];
-//  disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];
-//  disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];
-//  disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];
+  rtc_now = rtc.now();
 }
 
 void thr_dht_func(){
@@ -291,23 +323,41 @@ void thr_dht_func(){
   // Put the buffer average to the brightness variable
   dht_temp = dht_temp_average_calc();
   dht_hum = dht_hum_average_calc();
-
-
-//  disp_content[0] = 0b01101110;               // H
-//  disp_content[1] = 0x00;                     // 
-//  disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];  // 0 - 9
-//  disp_content[3] = seven_seg_numbers[((int) dht_hum) % 10];  // 0 - 9
-
-  //disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];  // 0 - 9
-  //disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];  // 0 - 9
-  //disp_content[2] = 0b11000110;                 // °
-  //disp_content[3] = 0b10011100;                 // C
-  
 }
 
 void thr_ir_func(){
   if (ir_recv.decode(&ir_results)) {
 
+    switch(ir_results.value){
+      case 0xC26BF044:  break; // Up
+      case 0xC4FFB646:  break; // Down
+      case 0x758C9D82:  break; // Left
+      case 0x53801EE8:  break; // Right
+      case 0x8AF13528:  break; // Center
+      
+      case 0x3BCD58C8: main_current_screen = MAIN_SCREEN_HOME; break; // Return
+      case 0x974F362:  main_current_screen = MAIN_SCREEN_HOME; break; // Exit
+      
+      case 0x68733A46:  disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Vol+
+      case 0x83B19366:  disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Vol-
+      case 0x2340B922:  thr_ldr.enabled = true;                                    break; // Mute
+      
+      case 0x6BDD79E6:  break; // Content
+  
+      case 0xDAEA83EC: main_current_screen = MAIN_SCREEN_LDR; break; // A
+      case 0x2BAFCEEC:  break; // B
+      case 0xB5210DA6:  break; // C
+      case 0x71A1FE88:  break; // D
+  
+      case 0x6A618E02:  break; // Play
+      case 0xE0F44528:  break; // Pause
+      case 0xC863D6C8:  break; // Stop
+    }
+
+    if(disp_brightness > DISP_BR_MAX) disp_brightness = DISP_BR_MAX; else
+    if(disp_brightness <= 8) disp_brightness = 8;
+
+    /*
     byte disp_content_old[DISP_LENGTH];
     for(int i = 0; i < DISP_LENGTH; i++)
       disp_content_old[i] = disp_content[i];
@@ -353,7 +403,7 @@ void thr_ir_func(){
     //if(disp_brightness < 8) disp_brightness = 8;
 
     //c_ir_digit++;
-    //c_ir_digit %= DISP_LENGTH;
+    //c_ir_digit %= DISP_LENGTH;*/
 
     ir_recv.resume(); // Receive the next value
   }
