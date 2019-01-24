@@ -34,6 +34,8 @@
 
 #define IR_PIN A1
 #define IR_INTERVAL 100
+#define IR_TRYOUT 5 
+#define IR_TRY_TIME 100
 
 // Binary data
 byte seven_seg_numbers [10] = {
@@ -326,9 +328,13 @@ void thr_dht_func(){
 }
 
 void thr_ir_func(){
-  if (ir_recv.decode(&ir_results)) {
+  for (int read_try = 0; ir_recv.decode(&ir_results) and read_try < IR_TRYOUT; read_try++) {
+    // Read the ir HEX value
+    int value = ir_results.value;
+    // Receive the next value
+    ir_recv.resume(); 
 
-    switch(ir_results.value){
+    switch(value){
       case 0xC26BF044:  break; // Up
       case 0xC4FFB646:  break; // Down
       case 0x758C9D82:  break; // Left
@@ -352,60 +358,20 @@ void thr_ir_func(){
       case 0x6A618E02:  break; // Play
       case 0xE0F44528:  break; // Pause
       case 0xC863D6C8:  break; // Stop
+
+      // Try again
+      default: delay(IR_TRY_TIME); continue; break;
     }
 
-    if(disp_brightness > DISP_BR_MAX) disp_brightness = DISP_BR_MAX; else
-    if(disp_brightness <= 8) disp_brightness = 8;
-
-    /*
-    byte disp_content_old[DISP_LENGTH];
-    for(int i = 0; i < DISP_LENGTH; i++)
-      disp_content_old[i] = disp_content[i];
-      
-
-    for(int i = DISP_LENGTH - 2; i >= 0; i--)
-      disp_content[i + 1] = disp_content[i];
-    
-    switch(ir_results.value){
-      case 0xB9F56762: disp_content[0] = seven_seg_numbers[0]; break; // 0
-      case 0xE13DDA28: disp_content[0] = seven_seg_numbers[1]; break; // 1
-      case 0xAD586662: disp_content[0] = seven_seg_numbers[2]; break; // 2
-      case 0x273009C4: disp_content[0] = seven_seg_numbers[3]; break; // 3
-      case 0xF5999288: disp_content[0] = seven_seg_numbers[4]; break; // 4
-      case 0x731A3E02: disp_content[0] = seven_seg_numbers[5]; break; // 5
-      case 0x2C452C6C: disp_content[0] = seven_seg_numbers[6]; break; // 6
-      case 0x4592E14C: disp_content[0] = seven_seg_numbers[7]; break; // 7
-      case 0x6825E53E: disp_content[0] = seven_seg_numbers[8]; break; // 8
-      case 0x8B8510E8: disp_content[0] = seven_seg_numbers[9]; break; // 9
-      
-      case 0x52A5A66: disp_content[0] = 0x00; break; // Clear
-      //case 0xCA8CBCC6: c_ir_digit = 3; break; // Back to home
-
-      case 0xCA8CBCC6:
-        disp_content[0] = 0b01111010; // d
-        disp_content[1] = 0b11101110; // a
-        disp_content[2] = 0b01111100; // v
-        disp_content[3] = 0b00001100; // i
-        break;
-
-      default:
-        for(int i = 0; i < DISP_LENGTH; i++)
-          disp_content[i] = disp_content_old[i];
-        break;
-    };
-
-    switch(ir_results.value){
-      case 0x68733A46: disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Brightness ++
-      case 0x83B19366: disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Brightness --
+    // Put brightness value on range just when the auto ajust is disabled
+    if(!thr_ldr.enabled){
+      if(disp_brightness > DISP_BR_MAX) disp_brightness = DISP_BR_MAX; else
+      if(disp_brightness <= 8) disp_brightness = 8;
     }
 
-    //if(disp_brightness > DISP_BR_MAX) disp_brightness = DISP_BR_MAX; else
-    //if(disp_brightness < 8) disp_brightness = 8;
-
-    //c_ir_digit++;
-    //c_ir_digit %= DISP_LENGTH;*/
-
-    ir_recv.resume(); // Receive the next value
+    // Clean the all readed values
+    while(ir_recv.decode(&ir_results)){}
+    break;
   }
 }
 
