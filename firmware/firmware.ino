@@ -27,8 +27,9 @@
 
 #define RTC_INTERVAL 4000
 
+#define DHT_INIT_VALUE -255
 #define DHT_PIN A0
-#define DHT_TYPE DHT11
+#define DHT_TYPE DHT::DHT11
 #define DHT_BUFFER_LENGTH 4
 #define DHT_BUFFER_INTERVAL 60000
 
@@ -87,8 +88,8 @@ DateTime rtc_now;
 // DHT
 DHT dht;
 
-float dht_temp = 0;
-float dht_hum = 0;
+float dht_temp = DHT_INIT_VALUE;
+float dht_hum = DHT_INIT_VALUE;
 
 int dht_temp_buffer[DHT_BUFFER_LENGTH];
 int dht_hum_buffer[DHT_BUFFER_LENGTH];
@@ -104,9 +105,6 @@ int main_current_screen = MAIN_SCREEN_HOME;
 int debug_thread_loop_tester = 0;
 
 void setup() {
-  // Restart the TIMER2
-  TCNT2 = 0;
-
   /*    *    *    PIN MODE   *    *    */
   
   // PinMode display digits pins
@@ -129,7 +127,7 @@ void setup() {
 
   // Initialize Registers
   TCNT2  = 0;
-  OCR2A = 96;
+  OCR2A = 100;
   
   // Enable to TIMER2 Interrupt
   TIMSK2 |= (1 << OCIE2A);
@@ -167,7 +165,7 @@ void setup() {
 
   Wire.begin();
   rtc.begin();
-  dht.setup(DHT_PIN);
+  dht.setup(DHT_PIN, DHT_TYPE);
   ir_recv.enableIRIn();
 
   /*    *   CHECK COMPONENTS  *    */
@@ -234,7 +232,7 @@ void thr_main_func() {
       if(m <= 2000){ /* Do nothing */ } else
       
       // Temperature
-      if(m / 2000 % 10 == 8){       // Each 20s, runs on 16s, per 2s
+      if(m / 2000 % 10 == 8 && dht_temp != DHT_INIT_VALUE){           // Each 20s, runs on 16s, per 2s
         disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];   // 0 - 9
         disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];   // 0 - 9
         disp_content[2] = 0b11000110;                                 // °
@@ -242,7 +240,7 @@ void thr_main_func() {
       } else
       
       // Humidity
-      if(m / 2000 % 10 == 9){       // Each 20s, runs on 18s, per 2s
+      if(m / 2000 % 10 == 9 && dht_hum != DHT_INIT_VALUE){            // Each 20s, runs on 18s, per 2s
         disp_content[0] = 0b01101110;                                 // H
         disp_content[1] = 0x00;                                       // null
         disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];    // 0 - 9
@@ -250,7 +248,7 @@ void thr_main_func() {
       }
       
       // Hours and Minutes
-      else {                        // Runs when others 'IFs' are false
+      else {                                                          // Runs when others 'IFs' are false
         disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];     // 0 - 9
         disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];     // 0 - 9
         disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];   // 0 - 9
@@ -297,17 +295,21 @@ void thr_rtc_func(){
 }
 
 void thr_dht_func(){
-  T2_disable();
+  // Disable display timer while dht read
+  DispTimer_disable();
   float dht_temp_read = dht.getTemperature();
   float dht_hum_read = dht.getHumidity();
-  T2_enable();
+  DispTimer_enable();
+
+  // Ignore read errors
+  if(dht.getStatus() != DHT::ERROR_NONE) return;
 
   // Avoid first read problems
-  if(dht_temp_average_calc() == 0)
+  if(dht_temp == DHT_INIT_VALUE)
     for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
       dht_temp_buffer[i] = dht_temp_read;
 
-  if(dht_hum_average_calc() == 0)
+  if(dht_hum == DHT_INIT_VALUE)
     for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
       dht_hum_buffer[i] = dht_hum_read;
 
@@ -391,7 +393,6 @@ float dht_hum_average_calc(){
 
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
-
   // Clean display
   PORTD = 0xff;                                   // Sets all PORTD pins to HIGH
 
@@ -417,11 +418,11 @@ ISR(TIMER2_COMPA_vect){
   disp_count %= DISP_BR_MAX * DISP_LENGTH;
 }
 
-void T2_enable(){
+void DispTimer_enable(){
   TIMSK2 |= (1 << OCIE2A); // enable timer compare interrupt
 }
 
-void T2_disable(){
+void DispTimer_disable(){
   TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
   PORTD = 0xff;             // Clean display
 }
