@@ -21,9 +21,11 @@
 #define DISP_PIN_LAST PB5
 
 #define MAIN_INTERVAL 100
-//#define MAIN_SCREEN_LENGTH 
-#define MAIN_SCREEN_HOME 0
-#define MAIN_SCREEN_LDR 1
+#define MAIN_SCREEN_HOME 1000
+#define MAIN_SCREEN_LDR 1001
+#define MAIN_SCREEN_CHRONOMETER 1002
+
+#define CHRONOMETER_INTERVAL 1000
 
 #define RTC_INTERVAL 4000
 
@@ -66,6 +68,8 @@ byte seven_seg_numbers [10] = {
 // Threads
 ThreadController cpu = ThreadController();
 Thread thr_main = Thread();
+Thread thr_chronometer = Thread();
+
 Thread thr_ldr = Thread();
 Thread thr_rtc = Thread();
 Thread thr_dht = Thread();
@@ -100,6 +104,9 @@ decode_results ir_results;
 
 // Main
 int main_current_screen = MAIN_SCREEN_HOME;
+
+// Chronometer
+int chronometer_counter = 0;
 
 // DEBUG
 int debug_thread_loop_tester = 0;
@@ -138,6 +145,10 @@ void setup() {
   thr_main.onRun(thr_main_func);
   thr_main.setInterval(MAIN_INTERVAL);
 
+  thr_chronometer.onRun(thr_chronometer_func);
+  thr_chronometer.setInterval(CHRONOMETER_INTERVAL);
+  thr_chronometer.enabled = false;
+
   thr_ldr.onRun(thr_ldr_func);
   thr_ldr.setInterval(DISP_BR_BUFFER_INTERVAL / DISP_BR_BUFFER_LENGTH);
 
@@ -156,6 +167,7 @@ void setup() {
 
   // Add thread to thead controll
   cpu.add(&thr_main);
+  cpu.add(&thr_chronometer);
   cpu.add(&thr_ldr);
   cpu.add(&thr_rtc);
   cpu.add(&thr_dht);
@@ -257,13 +269,30 @@ void thr_main_func() {
       break;
 
     case MAIN_SCREEN_LDR:
-      int l = disp_brightness;
       disp_content[0] = 0b00111110;   // b
       disp_content[1] = 0b00001010;   // r
-      disp_content[2] = ((l / 10) % 10) > 0 || l >= 100 ? seven_seg_numbers[(l / 10) % 10] : 0x00;
-      disp_content[3] = ((l / 1) % 10) > 0 || l >= 10 ? seven_seg_numbers[(l / 1) % 10] : 0x00;;
+      disp_content[2] = ((disp_brightness / 10) % 10) > 0 || disp_brightness >= 100 ? seven_seg_numbers[(disp_brightness / 10) % 10] : 0x00;
+      disp_content[3] = ((disp_brightness / 1) % 10) > 0 || disp_brightness >= 10 ? seven_seg_numbers[(disp_brightness / 1) % 10] : 0x00;
       break;
+
+    case MAIN_SCREEN_CHRONOMETER:
+      // Put the last digits of number on the display content array
+      for(int i = 0; i < DISP_LENGTH; i++)
+        disp_content[i] = ((chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10) > 0 || chronometer_counter >= (int) pow(10, DISP_LENGTH - i) || (chronometer_counter == 0 && i == DISP_LENGTH - 1) ? seven_seg_numbers[(chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10] : 0x00;
+        break;
+
+      default:
+        disp_content[0] = 0b11101100; // m
+        disp_content[1] = 0b10011110; // e
+        disp_content[2] = 0b00001010; // r
+        disp_content[3] = 0b00001010; // r
+        break;
   }
+}
+
+void thr_chronometer_func(){
+  chronometer_counter++;
+  chronometer_counter %= (int) pow(10, DISP_LENGTH);
 }
 
 void thr_ldr_func(){
@@ -353,13 +382,24 @@ void thr_ir_func(){
       case 0x6BDD79E6:  break; // Content
   
       case 0xDAEA83EC: main_current_screen = MAIN_SCREEN_LDR; break; // A
-      case 0x2BAFCEEC:  break; // B
+      case 0x2BAFCEEC: main_current_screen = MAIN_SCREEN_CHRONOMETER; break; // B
       case 0xB5210DA6:  break; // C
       case 0x71A1FE88:  break; // D
   
-      case 0x6A618E02:  break; // Play
-      case 0xE0F44528:  break; // Pause
-      case 0xC863D6C8:  break; // Stop
+      case 0x6A618E02:
+        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) thr_chronometer.enabled = true;
+        break; // Play
+        
+      case 0xE0F44528:
+        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) thr_chronometer.enabled = false;
+        break; // Pause
+        
+      case 0xC863D6C8:
+        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) {
+          thr_chronometer.enabled = false;
+          chronometer_counter = 0;
+        }
+        break; // Stop
 
       // Try again
       default: delay(IR_TRY_TIME); continue; break;
