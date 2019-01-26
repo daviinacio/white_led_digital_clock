@@ -21,30 +21,22 @@
 #define DISP_PIN_LAST PB5
 
 #define MAIN_INTERVAL 100
-#define MAIN_SCREEN_HOME 1000
-#define MAIN_SCREEN_LDR 1001
-#define MAIN_SCREEN_CHRONOMETER 1002
-
-#define CHRONOMETER_INTERVAL 1000
+//#define MAIN_SCREEN_LENGTH 
+#define MAIN_SCREEN_HOME 0
+#define MAIN_SCREEN_LDR 1
 
 #define RTC_INTERVAL 4000
 
 #define DHT_INIT_VALUE -255
 #define DHT_PIN A0
-#define DHT_TYPE DHT::DHT11
+#define DHT_TYPE DHT11
 #define DHT_BUFFER_LENGTH 4
 #define DHT_BUFFER_INTERVAL 60000
 
 #define IR_PIN A1
 #define IR_INTERVAL 100
-#define IR_TRYOUT 1
-#define IR_TRY_TIME 50
-
-#define BZ_PIN PB1
-#define BZ_INTERVAL 62
-#define BZ_STATUS_OFF 1100
-#define BZ_STATUS_OLDCLOCK 1101
-
+#define IR_TRYOUT 5 
+#define IR_TRY_TIME 100
 
 // Binary data
 byte seven_seg_numbers [10] = {
@@ -67,20 +59,18 @@ byte seven_seg_numbers [10] = {
 #include <Wire.h>
 #include "RTClib.h"
 
-#include "DHT.h"
+#include <SimpleDHT.h>
+//#include "DHT.h"
 
 #include <IRremote.h>
 
 // Threads
 ThreadController cpu = ThreadController();
 Thread thr_main = Thread();
-Thread thr_chronometer = Thread();
-
 Thread thr_ldr = Thread();
 Thread thr_rtc = Thread();
 Thread thr_dht = Thread();
 Thread thr_ir = Thread();
-Thread thr_buzzer = Thread();
 //Thread thr_panel = Thread();
 
 // Display
@@ -97,7 +87,8 @@ RTC_DS1307 rtc;
 DateTime rtc_now;
 
 // DHT
-DHT dht;
+//DHT dht;
+SimpleDHT11 dht11(DHT_PIN);
 
 float dht_temp = DHT_INIT_VALUE;
 float dht_hum = DHT_INIT_VALUE;
@@ -112,12 +103,6 @@ decode_results ir_results;
 // Main
 int main_current_screen = MAIN_SCREEN_HOME;
 
-// Chronometer
-int chronometer_counter = 0;
-
-// Buzzer
-int buzzer_status = BZ_STATUS_OFF;
-
 // DEBUG
 int debug_thread_loop_tester = 0;
 
@@ -129,7 +114,7 @@ void setup() {
   PORTD = 0xff;                   // Set all PortD pins to HIGH
 
   // PinMode display select pins
-  DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
+  DDRB = B00111100;               // Set pins 10, 11, 12, 13 to output and others to input
   PORTB = 0x00;                   // Set all PortB pins to LOW
 
   /*    *    ATMEGA TIMER2    *    */
@@ -155,10 +140,6 @@ void setup() {
   thr_main.onRun(thr_main_func);
   thr_main.setInterval(MAIN_INTERVAL);
 
-  thr_chronometer.onRun(thr_chronometer_func);
-  thr_chronometer.setInterval(CHRONOMETER_INTERVAL);
-  thr_chronometer.enabled = false;
-
   thr_ldr.onRun(thr_ldr_func);
   thr_ldr.setInterval(DISP_BR_BUFFER_INTERVAL / DISP_BR_BUFFER_LENGTH);
 
@@ -171,27 +152,22 @@ void setup() {
   thr_ir.onRun(thr_ir_func);
   thr_ir.setInterval(IR_INTERVAL);
 
-  thr_buzzer.onRun(thr_buzzer_func);
-  thr_buzzer.setInterval(BZ_INTERVAL);
-
   //thr_panel.onRun(thread_panel_loop);
   //thr_panel.setInterval(1000);
 
 
   // Add thread to thead controll
   cpu.add(&thr_main);
-  cpu.add(&thr_chronometer);
   cpu.add(&thr_ldr);
   cpu.add(&thr_rtc);
   cpu.add(&thr_dht);
   cpu.add(&thr_ir);
-  cpu.add(&thr_buzzer);
   
   /*    *  LIBRARY BEGINNERS  *    */
 
   Wire.begin();
   rtc.begin();
-  dht.setup(DHT_PIN, DHT_TYPE);
+  //dht.setup(DHT_PIN);
   ir_recv.enableIRIn();
 
   /*    *   CHECK COMPONENTS  *    */
@@ -258,7 +234,7 @@ void thr_main_func() {
       if(m <= 2000){ /* Do nothing */ } else
       
       // Temperature
-      if(m / 2000 % 10 == 8 && dht_temp != DHT_INIT_VALUE){           // Each 20s, runs on 16s, per 2s
+      if(m / 2000 % 10 == 8){       // Each 20s, runs on 16s, per 2s
         disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];   // 0 - 9
         disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];   // 0 - 9
         disp_content[2] = 0b11000110;                                 // °
@@ -266,7 +242,7 @@ void thr_main_func() {
       } else
       
       // Humidity
-      if(m / 2000 % 10 == 9 && dht_hum != DHT_INIT_VALUE){            // Each 20s, runs on 18s, per 2s
+      if(m / 2000 % 10 == 9){       // Each 20s, runs on 18s, per 2s
         disp_content[0] = 0b01101110;                                 // H
         disp_content[1] = 0x00;                                       // null
         disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];    // 0 - 9
@@ -274,7 +250,7 @@ void thr_main_func() {
       }
       
       // Hours and Minutes
-      else {                                                          // Runs when others 'IFs' are false
+      else {                        // Runs when others 'IFs' are false
         disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];     // 0 - 9
         disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];     // 0 - 9
         disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];   // 0 - 9
@@ -283,30 +259,13 @@ void thr_main_func() {
       break;
 
     case MAIN_SCREEN_LDR:
+      int l = disp_brightness;
       disp_content[0] = 0b00111110;   // b
       disp_content[1] = 0b00001010;   // r
-      disp_content[2] = ((disp_brightness / 10) % 10) > 0 || disp_brightness >= 100 ? seven_seg_numbers[(disp_brightness / 10) % 10] : 0x00;
-      disp_content[3] = ((disp_brightness / 1) % 10) > 0 || disp_brightness >= 10 ? seven_seg_numbers[(disp_brightness / 1) % 10] : 0x00;
+      disp_content[2] = ((l / 10) % 10) > 0 || l >= 100 ? seven_seg_numbers[(l / 10) % 10] : 0x00;
+      disp_content[3] = ((l / 1) % 10) > 0 || l >= 10 ? seven_seg_numbers[(l / 1) % 10] : 0x00;;
       break;
-
-    case MAIN_SCREEN_CHRONOMETER:
-      // Put the last digits of number on the display content array
-      for(int i = 0; i < DISP_LENGTH; i++)
-        disp_content[i] = ((chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10) > 0 || chronometer_counter >= (int) pow(10, DISP_LENGTH - i) || (chronometer_counter == 0 && i == DISP_LENGTH - 1) ? seven_seg_numbers[(chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10] : 0x00;
-        break;
-
-      default:
-        disp_content[0] = 0b11101100; // m
-        disp_content[1] = 0b10011110; // e
-        disp_content[2] = 0b00001010; // r
-        disp_content[3] = 0b00001010; // r
-        break;
   }
-}
-
-void thr_chronometer_func(){
-  chronometer_counter++;
-  chronometer_counter %= (int) pow(10, DISP_LENGTH);
 }
 
 void thr_ldr_func(){
@@ -338,21 +297,29 @@ void thr_rtc_func(){
 }
 
 void thr_dht_func(){
-  // Disable display timer while dht read
+  byte _dht_temp_read = 0x00;
+  byte _dht_hum_read = 0x00;
+  
   DispTimer_disable();
+  bool dhtReadStatus = dht11.read(&_dht_temp_read, &_dht_hum_read, NULL) == SimpleDHTErrSuccess;
+  DispTimer_enable();
+  
+  if(!dhtReadStatus) return;
+
+  float dht_temp_read = 0;
+  float dht_hum_read = 0;
+  
+  /*DispTimer_disable();
   float dht_temp_read = dht.getTemperature();
   float dht_hum_read = dht.getHumidity();
-  DispTimer_enable();
-
-  // Ignore read errors
-  if(dht.getStatus() != DHT::ERROR_NONE) return;
+  DispTimer_enable();*/
 
   // Avoid first read problems
-  if(dht_temp == DHT_INIT_VALUE)
+  if(dht_temp_average_calc() == DHT_INIT_VALUE)
     for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
       dht_temp_buffer[i] = dht_temp_read;
 
-  if(dht_hum == DHT_INIT_VALUE)
+  if(dht_hum_average_calc() == DHT_INIT_VALUE)
     for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
       dht_hum_buffer[i] = dht_hum_read;
 
@@ -373,19 +340,18 @@ void thr_dht_func(){
 }
 
 void thr_ir_func(){
-  //for (int read_try = 0; ir_recv.decode(&ir_results) and read_try < IR_TRYOUT; read_try++) {
-  if(ir_recv.decode(&ir_results)){
+  for (int read_try = 0; ir_recv.decode(&ir_results) and read_try < IR_TRYOUT; read_try++) {
     // Read the ir HEX value
     int value = ir_results.value;
     // Receive the next value
-    ir_recv.resume();
+    ir_recv.resume(); 
 
     switch(value){
-      case 0xC26BF044: buzzer_status = BZ_STATUS_OLDCLOCK; break; // Up
+      case 0xC26BF044:  break; // Up
       case 0xC4FFB646:  break; // Down
       case 0x758C9D82:  break; // Left
       case 0x53801EE8:  break; // Right
-      case 0x8AF13528: buzzer_status = BZ_STATUS_OFF; break; // Center
+      case 0x8AF13528:  break; // Center
       
       case 0x3BCD58C8: main_current_screen = MAIN_SCREEN_HOME; break; // Return
       case 0x974F362:  main_current_screen = MAIN_SCREEN_HOME; break; // Exit
@@ -397,27 +363,16 @@ void thr_ir_func(){
       case 0x6BDD79E6:  break; // Content
   
       case 0xDAEA83EC: main_current_screen = MAIN_SCREEN_LDR; break; // A
-      case 0x2BAFCEEC: main_current_screen = MAIN_SCREEN_CHRONOMETER; break; // B
+      case 0x2BAFCEEC:  break; // B
       case 0xB5210DA6:  break; // C
       case 0x71A1FE88:  break; // D
   
-      case 0x6A618E02:
-        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) thr_chronometer.enabled = true;
-        break; // Play
-        
-      case 0xE0F44528:
-        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) thr_chronometer.enabled = false;
-        break; // Pause
-        
-      case 0xC863D6C8:
-        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) {
-          thr_chronometer.enabled = false;
-          chronometer_counter = 0;
-        }
-        break; // Stop
+      case 0x6A618E02:  break; // Play
+      case 0xE0F44528:  break; // Pause
+      case 0xC863D6C8:  break; // Stop
 
       // Try again
-      //default: delay(IR_TRY_TIME); continue; break;
+      default: delay(IR_TRY_TIME); continue; break;
     }
 
     // Put brightness value on range just when the auto ajust is disabled
@@ -427,24 +382,8 @@ void thr_ir_func(){
     }
 
     // Clean the all readed values
-    //while(ir_recv.decode(&ir_results)){}
-    //break;
-  }
-}
-
-void thr_buzzer_func(){
-  switch(buzzer_status){
-    case BZ_STATUS_OLDCLOCK:
-      if(millis()/(BZ_INTERVAL * 8) % 2 == 0)
-        PORTB ^= (1 << BZ_PIN);
-      else
-        PORTB &= ~(1 << BZ_PIN);
-      break;
-
-    
-    default:
-      PORTB &= ~(1 << BZ_PIN);
-      break;
+    while(ir_recv.decode(&ir_results)){}
+    break;
   }
 }
 
@@ -464,6 +403,9 @@ float dht_hum_average_calc(){
 
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
+  // Restart the TIMER1
+  //TCNT1 = 0;
+
   // Clean display
   PORTD = 0xff;                                   // Sets all PORTD pins to HIGH
 
