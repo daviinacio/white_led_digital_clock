@@ -36,9 +36,7 @@
 #define DHT_BUFFER_INTERVAL 60000
 
 #define IR_PIN A1
-#define IR_INTERVAL 100
-#define IR_TRYOUT 1
-#define IR_TRY_TIME 50
+#define IR_INTERVAL 250
 
 #define BZ_PIN PB1
 #define BZ_INTERVAL 62
@@ -71,6 +69,8 @@ byte seven_seg_numbers [10] = {
 
 #include <IRremote.h>
 
+#include <Buffer.h>
+
 // Threads
 ThreadController cpu = ThreadController();
 Thread thr_main = Thread();
@@ -86,8 +86,7 @@ Thread thr_buzzer = Thread();
 // Display
 byte disp_content [DISP_LENGTH];
 
-int disp_brightness = DISP_BR_MIN;
-int disp_brightness_buffer[DISP_BR_BUFFER_LENGTH];
+Buffer disp_brightness_buffer(DISP_BR_BUFFER_LENGTH, DISP_BR_MAX);
 
 int disp_count = 0; 
 int disp_digit = 0;
@@ -99,11 +98,8 @@ DateTime rtc_now;
 // DHT
 DHT dht;
 
-float dht_temp = DHT_INIT_VALUE;
-float dht_hum = DHT_INIT_VALUE;
-
-int dht_temp_buffer[DHT_BUFFER_LENGTH];
-int dht_hum_buffer[DHT_BUFFER_LENGTH];
+Buffer dht_temp_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE);
+Buffer dht_hum_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE);
 
 // IR Remore
 IRrecv ir_recv(IR_PIN);
@@ -200,7 +196,7 @@ void setup() {
     // following line sets the RTC to the date & time this sketch was compiled
     //rtc.adjust(DateTime(__DATE__, __TIME__));
 
-    disp_brightness = DISP_BR_MAX;
+    //_disp_brightness.fill(DISP_BR_MAX);
 
     while(1){
       if(millis()/1000 % 3 >= 1){
@@ -258,19 +254,19 @@ void thr_main_func() {
       if(m <= 2000){ /* Do nothing */ } else
       
       // Temperature
-      if(m / 2000 % 10 == 8 && dht_temp != DHT_INIT_VALUE){           // Each 20s, runs on 16s, per 2s
-        disp_content[0] = seven_seg_numbers[((int) dht_temp) / 10];   // 0 - 9
-        disp_content[1] = seven_seg_numbers[((int) dht_temp) % 10];   // 0 - 9
+      if(m / 2000 % 10 == 8 && dht_temp_buffer.getAverage() != DHT_INIT_VALUE){           // Each 20s, runs on 16s, per 2s
+        disp_content[0] = seven_seg_numbers[((int) dht_temp_buffer.getAverage()) / 10];   // 0 - 9
+        disp_content[1] = seven_seg_numbers[((int) dht_temp_buffer.getAverage()) % 10];   // 0 - 9
         disp_content[2] = 0b11000110;                                 // °
         disp_content[3] = 0b10011100;                                 // C
       } else
       
       // Humidity
-      if(m / 2000 % 10 == 9 && dht_hum != DHT_INIT_VALUE){            // Each 20s, runs on 18s, per 2s
+      if(m / 2000 % 10 == 9 && dht_hum_buffer.getAverage() != DHT_INIT_VALUE){            // Each 20s, runs on 18s, per 2s
         disp_content[0] = 0b01101110;                                 // H
         disp_content[1] = 0x00;                                       // null
-        disp_content[2] = seven_seg_numbers[((int) dht_hum) / 10];    // 0 - 9
-        disp_content[3] = seven_seg_numbers[((int) dht_hum) % 10];    // 0 - 9
+        disp_content[2] = seven_seg_numbers[((int) dht_hum_buffer.getAverage()) / 10];    // 0 - 9
+        disp_content[3] = seven_seg_numbers[((int) dht_hum_buffer.getAverage()) % 10];    // 0 - 9
       }
       
       // Hours and Minutes
@@ -285,8 +281,8 @@ void thr_main_func() {
     case MAIN_SCREEN_LDR:
       disp_content[0] = 0b00111110;   // b
       disp_content[1] = 0b00001010;   // r
-      disp_content[2] = ((disp_brightness / 10) % 10) > 0 || disp_brightness >= 100 ? seven_seg_numbers[(disp_brightness / 10) % 10] : 0x00;
-      disp_content[3] = ((disp_brightness / 1) % 10) > 0 || disp_brightness >= 10 ? seven_seg_numbers[(disp_brightness / 1) % 10] : 0x00;
+      disp_content[2] = ((disp_brightness_buffer.getAverage() / 10) % 10) > 0 || disp_brightness_buffer.getAverage() >= 100 ? seven_seg_numbers[(disp_brightness_buffer.getAverage() / 10) % 10] : 0x00;
+      disp_content[3] = ((disp_brightness_buffer.getAverage() / 1) % 10) > 0 || disp_brightness_buffer.getAverage() >= 10 ? seven_seg_numbers[(disp_brightness_buffer.getAverage() / 1) % 10] : 0x00;
       break;
 
     case MAIN_SCREEN_CHRONOMETER:
@@ -317,20 +313,7 @@ void thr_ldr_func(){
   if(br_read > DISP_BR_MAX) br_read = DISP_BR_MAX; else
   if(br_read < DISP_BR_MIN) br_read = DISP_BR_MIN;
 
-  // Avoid first read problems
-  if(disp_br_average_calc() == 0)
-    for(int i = 0; i < DISP_BR_BUFFER_LENGTH; i++)
-      disp_brightness_buffer[i] = br_read;
-
-  // Move the buffer to side
-  for(int i = DISP_BR_BUFFER_LENGTH - 2; i >= 0; i--)
-      disp_brightness_buffer[i + 1] = disp_brightness_buffer[i];
-      
-  // Insert the new value on buffer
-  disp_brightness_buffer[0] = br_read;
-
-  // Put the buffer average to the brightness variable
-  disp_brightness = disp_br_average_calc();
+  disp_brightness_buffer.insert(br_read);
 }
 
 void thr_rtc_func(){
@@ -348,37 +331,20 @@ void thr_dht_func(){
   if(dht.getStatus() != DHT::ERROR_NONE) return;
 
   // Avoid first read problems
-  if(dht_temp == DHT_INIT_VALUE)
-    for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
-      dht_temp_buffer[i] = dht_temp_read;
-
-  if(dht_hum == DHT_INIT_VALUE)
-    for(int i = 0; i < DHT_BUFFER_LENGTH; i++)
-      dht_hum_buffer[i] = dht_hum_read;
-
-  // Move the buffer to side
-  for(int i = DHT_BUFFER_LENGTH - 2; i >= 0; i--)
-      dht_temp_buffer[i + 1] = dht_temp_buffer[i];
-
-  for(int i = DHT_BUFFER_LENGTH - 2; i >= 0; i--)
-      dht_hum_buffer[i + 1] = dht_hum_buffer[i];
-      
-  // Insert the new value on buffer
-  dht_temp_buffer[0] = dht_temp_read;
-  dht_hum_buffer[0] = dht_hum_read;
-
-  // Put the buffer average to the brightness variable
-  dht_temp = dht_temp_average_calc();
-  dht_hum = dht_hum_average_calc();
+  dht_temp_buffer.insert(dht_temp_read);
+  dht_hum_buffer.insert(dht_hum_read);
 }
 
 void thr_ir_func(){
   //for (int read_try = 0; ir_recv.decode(&ir_results) and read_try < IR_TRYOUT; read_try++) {
   if(ir_recv.decode(&ir_results)){
     // Read the ir HEX value
-    int value = ir_results.value;
+    unsigned long value = ir_results.value;
     // Receive the next value
     ir_recv.resume();
+
+    // Temporary variable
+    float tp;
 
     switch(value){
       case 0xC26BF044: buzzer_status = BZ_STATUS_OLDCLOCK; break; // Up
@@ -390,14 +356,32 @@ void thr_ir_func(){
       case 0x3BCD58C8: main_current_screen = MAIN_SCREEN_HOME; break; // Return
       case 0x974F362:  main_current_screen = MAIN_SCREEN_HOME; break; // Exit
       
-      case 0x68733A46:  disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Vol+
-      case 0x83B19366:  disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false; break; // Vol-
-      case 0x2340B922:  thr_ldr.enabled = true;                                    break; // Mute
+      case 0x68733A46:  //disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; 
+        thr_ldr.enabled = false;
+        
+        tp = disp_brightness_buffer.getAverage();
+        tp += DISP_BR_MAX/8;
+        if(tp > DISP_BR_MAX) tp = DISP_BR_MAX;
+
+        disp_brightness_buffer.fill(tp);
+        break; // Vol+
+        
+      case 0x83B19366:  //disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false;
+        thr_ldr.enabled = false;
+        
+        tp = disp_brightness_buffer.getAverage();
+        tp -= DISP_BR_MAX/8;
+        if(tp < DISP_BR_MIN) tp = DISP_BR_MIN;
+
+        disp_brightness_buffer.fill(tp);
+        break; // Vol-
+        
+      case 0x2340B922:  thr_ldr.enabled = true; break; // Mute
       
       case 0x6BDD79E6:  break; // Content
   
-      case 0xDAEA83EC: main_current_screen = MAIN_SCREEN_LDR; break; // A
-      case 0x2BAFCEEC: main_current_screen = MAIN_SCREEN_CHRONOMETER; break; // B
+      case 0xDAEA83EC:  main_current_screen = MAIN_SCREEN_LDR; break; // A
+      case 0x2BAFCEEC:  main_current_screen = MAIN_SCREEN_CHRONOMETER; break; // B
       case 0xB5210DA6:  break; // C
       case 0x71A1FE88:  break; // D
   
@@ -415,20 +399,7 @@ void thr_ir_func(){
           chronometer_counter = 0;
         }
         break; // Stop
-
-      // Try again
-      //default: delay(IR_TRY_TIME); continue; break;
     }
-
-    // Put brightness value on range just when the auto ajust is disabled
-    if(!thr_ldr.enabled){
-      if(disp_brightness > DISP_BR_MAX) disp_brightness = DISP_BR_MAX; else
-      if(disp_brightness <= 8) disp_brightness = 8;
-    }
-
-    // Clean the all readed values
-    //while(ir_recv.decode(&ir_results)){}
-    //break;
   }
 }
 
@@ -441,25 +412,10 @@ void thr_buzzer_func(){
         PORTB &= ~(1 << BZ_PIN);
       break;
 
-    
     default:
       PORTB &= ~(1 << BZ_PIN);
       break;
   }
-}
-
-/*    *    * INPUT BUFFER AVERAGES *    *    */
-
-int disp_br_average_calc(){
-  return buffer_average_calc(disp_brightness_buffer, DISP_BR_BUFFER_LENGTH);
-}
-
-float dht_temp_average_calc(){
-  return buffer_average_calc(dht_temp_buffer, DHT_BUFFER_LENGTH);
-}
-
-float dht_hum_average_calc(){
-  return buffer_average_calc(dht_hum_buffer , DHT_BUFFER_LENGTH);
 }
 
 /*    *    *    *    TIMER2    *    *    *    */
@@ -468,7 +424,7 @@ ISR(TIMER2_COMPA_vect){
   PORTD = 0xff;                                   // Sets all PORTD pins to HIGH
 
   // Brightness control
-  if((disp_count/DISP_LENGTH) < disp_brightness){
+  if((disp_count/DISP_LENGTH) < ((int) disp_brightness_buffer.getAverage())){
     PORTB |= 0b00111100;                          // Puts pins PB2, PB3, PB4, PB5 to HIGH
     PORTB ^= 0b00111100;                          // Toggle pins PB2, PB3, PB4, PB5 to LOW
   
@@ -496,29 +452,4 @@ void DispTimer_enable(){
 void DispTimer_disable(){
   TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
   PORTD = 0xff;             // Clean display
-}
-
-
-/*    *    *    *    UTILS     *    *    *    */
-
-int buffer_average_calc(int b[], int l){
-  int sum = 0;
-
-  // Sum all buffer value
-  for(int i = 0; i < l; i++)
-    sum += b[i];
-
-  // Divide the buffer sum per buffer length
-  return sum / l;
-}
-
-float buffer_average_calc(float b[], int l){
-  float sum = 0;
-
-  // Sum all buffer value
-  for(int i = 0; i < l; i++)
-    sum += b[i];
-
-  // Divide the buffer sum per buffer length
-  return sum / l;
 }
