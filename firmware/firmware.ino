@@ -331,8 +331,11 @@ void thr_dht_func(){
   if(dht.getStatus() != DHT::ERROR_NONE) return;
 
   // Avoid first read problems
-  dht_temp_buffer.insert(dht_temp_read);
-  dht_hum_buffer.insert(dht_hum_read);
+  if(dht_temp_buffer.empty()) dht_temp_buffer.fill((int) dht_temp_read);
+  else                        dht_temp_buffer.insert((int) dht_temp_read);
+
+  if(dht_hum_buffer.empty())  dht_hum_buffer.fill((int) dht_hum_read);
+  else                        dht_hum_buffer.insert((int) dht_hum_read);
 }
 
 void thr_ir_func(){
