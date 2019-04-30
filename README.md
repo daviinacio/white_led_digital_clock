@@ -25,7 +25,7 @@ This is a digital led clock made based on arduino uno microcontroller.
 ## Files and Images
 
 ### Principal files
-[firmware.ino](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/firmware/firmware.ino)
+- [firmware.ino](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/firmware/firmware.ino)
 
 ### Schematic design and PCB prints
 
