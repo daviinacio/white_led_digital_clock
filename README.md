@@ -31,11 +31,11 @@ This is a digital led clock made based on arduino uno microcontroller.
 
 | Schematic design |
 |:----------------:|
-|![Schematic design](hardware/prints_v2/Schematic_design.png)|
+|![Schematic design](/hardware/prints_v2/Schematic_design.png)|
 
 | PCB layout | PCB preview |
 |:----------:|:-----------:|
-|![PCB layout](hardware/prints_v2/PCB_layout.png)| ![PCB preview](hardware/prints_v2/PCB_preview.png)
+|![PCB layout](/hardware/prints_v2/PCB_layout.png)| ![PCB preview](/hardware/prints_v2/PCB_preview.png)
 
 
 ### Photos
