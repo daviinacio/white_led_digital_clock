@@ -29,13 +29,14 @@ This is a digital led clock made based on arduino uno microcontroller.
 
 ### Schematic design and PCB prints
 
-| |
-|:-:|
-|![Schematic design](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/hardware/prints_v2/Schematic_design.png)|
 
-| | |
-|:-:|:-:|
-|![PCB layout](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/hardware/prints_v2/PCB_layout.png)|![PCB preview](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/hardware/prints_v2/PCB_preview.png)|
+<p align="center">
+  <img width="100%" height="100%" src="hardware/prints_v2/Schematic_design.png">
+</p>
+<p align="center">
+  <img width="49%" src="/hardware/prints_v2/PCB_layout.png">
+  <img width="50%"  src="hardware/prints_v2/PCB_preview.png">
+</p>
+
 
 ### Photos
-
