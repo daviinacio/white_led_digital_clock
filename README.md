@@ -21,3 +21,16 @@ This is a digital led clock made based on arduino uno microcontroller.
 - Show the average of temperature and humidity
 - Changes the display brightness automatically
 - Can be controlled by TV remote control
+
+## Files and Images
+
+### Principal files
+[firmware.ino](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/firmware/firmware.ino)
+
+### Schematic design and PCB prints
+![Schematic design](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/hardware/prints_v2/Schematic_design.png)
+![PCB layout](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/hardware/prints_v2/PCB_layout.png)
+![PCB preview](https://github.com/daviinacio/White_Led_Digital_Clock/blob/master/hardware/prints_v2/PCB_preview.png)
+
+### Photos
+
