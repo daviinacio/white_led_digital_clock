@@ -1,6 +1,11 @@
 # White Led Digital Clock
 This is a digital led clock made based on arduino uno microcontroller.
 
+
+|   |   |
+|:-:|:-:|
+|![](/hardware/photos/20190101_195619.jpg)|![](/hardware/photos/20190101_195603.jpg)|
+
 ## Dependencies
 - [Arduino Thread](https://github.com/ivanseidel/ArduinoThread)
 - [arduino-buffer](https://github.com/daviinacio/arduino-buffer)
@@ -38,4 +43,12 @@ This is a digital led clock made based on arduino uno microcontroller.
 |![PCB layout](/hardware/prints_v2/PCB_layout.png)| ![PCB preview](/hardware/prints_v2/PCB_preview.png)
 
 
-### Photos
+### More Photos
+
+|   |   |   |
+|:-:|:-:|:-:|
+|![](/hardware/photos/20190105_220150-1.jpg)|![](/hardware/photos/20190111_230230-1.jpg)|![](/hardware/photos/20190112_202421_Burst01-1.jpg)|
+
+
+
+
