@@ -281,14 +281,16 @@ void thr_main_func() {
     case MAIN_SCREEN_LDR:
       disp_content[0] = 0b00111110;   // b
       disp_content[1] = 0b00001010;   // r
-      disp_content[2] = ((disp_brightness_buffer.getAverage() / 10) % 10) > 0 || disp_brightness_buffer.getAverage() >= 100 ? seven_seg_numbers[(disp_brightness_buffer.getAverage() / 10) % 10] : 0x00;
-      disp_content[3] = ((disp_brightness_buffer.getAverage() / 1) % 10) > 0 || disp_brightness_buffer.getAverage() >= 10 ? seven_seg_numbers[(disp_brightness_buffer.getAverage() / 1) % 10] : 0x00;
+      disp_content[2] = seven_seg_numbers_extract(disp_brightness_buffer.getAverage(), 2, false);
+      disp_content[3] = seven_seg_numbers_extract(disp_brightness_buffer.getAverage(), 3, false);
+      //disp_content[3] = ((disp_brightness_buffer.getAverage() / 1) % 10) > 0 || disp_brightness_buffer.getAverage() >= 10 ? seven_seg_numbers[(disp_brightness_buffer.getAverage() / 1) % 10] : 0x00;
       break;
 
     case MAIN_SCREEN_CHRONOMETER:
       // Put the last digits of number on the display content array
       for(int i = 0; i < DISP_LENGTH; i++)
-        disp_content[i] = ((chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10) > 0 || chronometer_counter >= (int) pow(10, DISP_LENGTH - i) || (chronometer_counter == 0 && i == DISP_LENGTH - 1) ? seven_seg_numbers[(chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10] : 0x00;
+        disp_content[i] = seven_seg_numbers_extract(chronometer_counter, i, false);
+        //disp_content[i] = ((chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10) > 0 || chronometer_counter >= (int) pow(10, DISP_LENGTH - i) || (chronometer_counter == 0 && i == DISP_LENGTH - 1) ? seven_seg_numbers[(chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10] : 0x00;
         break;
 
       default:
@@ -419,6 +421,12 @@ void thr_buzzer_func(){
       PORTB &= ~(1 << BZ_PIN);
       break;
   }
+}
+
+// TODO: Test this prototype on board
+void seven_seg_numbers_extract(int number, int digit, boolean show_zero){
+  int powered = pow(10, digit);
+  return((number / powered) % 10) > 0 || (show_zero ? true : number >= powered * 10) ? seven_seg_numbers[(number / powered) % 10] : 0x00;
 }
 
 /*    *    *    *    TIMER2    *    *    *    */
