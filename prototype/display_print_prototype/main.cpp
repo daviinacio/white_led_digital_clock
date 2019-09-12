@@ -1,0 +1,175 @@
+/*
+ * (c) daviapps 2019
+ *
+ * White LED Digital Clock
+ *       Prototype
+ *
+ * description: This is a prototype to make easy to work with the display content
+ * author: github.com/daviinacio
+ * site: daviinacio.com.br
+ * date: 12/09/2019
+ *
+ */
+
+// To run this on terminal type: ./run
+
+// Abstraction from the real code
+#define DISP_LENGTH 4
+
+#include <iostream>
+#include <windows.h>
+#include <math.h>
+
+/*
+// Seven Segments Display Abstraction
+
+|--- a ---|
+|         |
+f         b
+|         |
+|--- g ---|
+|         |
+e         c
+|         |
+|--- d ---| (.)
+
+0b [a], [b], [c], [d], [e], [f], [g], [.]
+    0    1    2    3    4    5    6    7
+
+*/
+
+// ASCII map for seven Segments
+// TODO: This will will replaced for binary content
+byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
+    '*',
+    // Especial characters
+    0x00, 0x00,
+    '-',
+    // Especial characters
+    0x00, 0x00,
+
+    // Numbers
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    
+    // Especial characters
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+    // Alfabetic characters
+    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+    'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+};
+int seven_seg_ascii_init = (int) seven_seg_asciis[0]; // First mapped ascci position
+
+// Content
+byte disp_content [DISP_LENGTH];
+// Cursor
+int disp_content_cursor = 0;
+
+// Debug
+void debug_disp_content(){
+    printf("disp_content_cursor = %i\n", disp_content_cursor);
+    for(int i = 0; i < DISP_LENGTH; i++)
+        printf("[%c]", disp_content[i]);
+    
+    printf("\n\n");
+}
+
+// Prototype
+void disp_setCursor(int col){
+    disp_content_cursor = col % DISP_LENGTH;
+}
+
+void disp_clear(){
+    for(int i = 0; i < DISP_LENGTH; i++)
+        disp_content[i] = 0x00;
+}
+
+void disp_print(char c){
+    disp_content[disp_content_cursor] = seven_seg_asciis[((int) c) - seven_seg_ascii_init]; //content[i];
+    disp_content_cursor++;
+}
+
+void disp_print(int num){
+    /*
+    void seven_seg_numbers_extract(int number, int digit, boolean show_zero){
+    int powered = pow(10, digit);
+    return((number / powered) % 10) > 0 || (show_zero ? true : number >= powered * 10) ? seven_seg_numbers[(number / powered) % 10] : 0x00;
+    }
+    */
+
+    /*
+    Printing number formats
+
+    Normal print
+    {cursor = 1}
+    [ ], [4], [2], [ ]
+
+    Fullscreen right
+    {cursor = 0}
+    [ ], [ ], [4], [2]
+
+    Fullscreen left
+    {cursor = 0}
+    [4], [2], [ ], [0]
+
+    */
+}
+
+void disp_print(char content []){
+    //printf("Content length: %i\n", strlen(content));
+
+    for(int i = 0; i < strlen(content) && disp_content_cursor < DISP_LENGTH; i++){
+        // Avoid array overflow
+        //disp_content_cursor %= DISP_LENGTH;
+
+        // Insert the char content on array
+        disp_print(content[i]);
+        
+        //disp_content[disp_content_cursor] = seven_seg_asciis[((int) content[i]) - seven_seg_ascii_init]; //content[i];
+
+        //disp_content_cursor++;
+    }
+}
+
+int main(){
+    // Print diferent Types
+    disp_clear();
+    disp_setCursor(0);
+    disp_print('H');
+
+    disp_setCursor(2);
+    disp_print((char*) "10");
+    
+    debug_disp_content();
+
+    // Print string
+    disp_clear();
+    disp_setCursor(0);
+    disp_print((char*) "DAVI INACIO");
+
+    debug_disp_content();
+
+    // Print character
+    disp_clear();
+    disp_setCursor(0);
+    
+    disp_print('I');
+    disp_print('V');
+    disp_print('A');
+    disp_print('D');
+
+    debug_disp_content();
+
+    // Print integer
+    disp_clear();
+    disp_setCursor(0);
+    disp_print(10);
+
+    disp_setCursor(2);
+    disp_print((char*) "*C");
+
+    debug_disp_content();
+    
+    // Debug
+    system("PAUSE");
+}
