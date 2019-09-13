@@ -190,5 +190,16 @@ int main(){
     
     debug_disp_content();
 
+    int temp = 7;
+
+    disp_clear();
+    disp_setCursor(0);
+    disp_print(0);
+    disp_setCursor(temp > 0 && temp < 10 ? 1 : 0);
+    disp_print(temp);
+    disp_print((char*)"*C");
+    
+    debug_disp_content();
+
     system("PAUSE");
 }
