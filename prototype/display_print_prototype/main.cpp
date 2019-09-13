@@ -90,29 +90,8 @@ void disp_print(char c){
 }
 
 void disp_print(char content []){
-    //printf("Content length: %i\n", strlen(content));
-
-    for(int i = 0; i < strlen(content) && disp_content_cursor < DISP_LENGTH; i++){
-        // Avoid array overflow
-        //disp_content_cursor %= DISP_LENGTH;
-
-        // Insert the char content on array
+    for(int i = 0; i < strlen(content) && disp_content_cursor < DISP_LENGTH; i++)
         disp_print(content[i]);
-        
-        //disp_content[disp_content_cursor] = seven_seg_asciis[((int) content[i]) - seven_seg_ascii_init]; //content[i];
-
-        //disp_content_cursor++;
-    }
-}
-
-void disp_print_end(int num){
-    char _num [11] = "";
-
-    itoa(num, _num, 10);
-    
-    //disp_clear();
-    disp_setCursor(DISP_LENGTH - strlen(_num));
-    disp_print(_num);
 }
 
 void disp_print(int num){
@@ -121,32 +100,26 @@ void disp_print(int num){
     itoa(num, _num, 10);
     
     disp_print(_num);
-
-    //for(int i = 0; i < strlen(_num); i++){
-    //    printf("[%i]: %c\n", i, _num[i]);
-    //}
-
-
-    /*
-    void seven_seg_numbers_extract(int number, int digit, boolean show_zero){
-    int powered = pow(10, digit);
-    return((number / powered) % 10) > 0 || (show_zero ? true : number >= powered * 10) ? seven_seg_numbers[(number / powered) % 10] : 0x00;
-    }
-    */
-
-    /*
-    Printing number formats
-    Normal print
-    {cursor = 1}
-    [ ], [4], [2], [ ]
-    Fullscreen right
-    {cursor = 0}
-    [ ], [ ], [4], [2]
-    Fullscreen left
-    {cursor = 0}
-    [4], [2], [ ], [0]
-    */
 }
+
+// Print on the end
+void disp_printEnd(char content []){
+    disp_setCursor(DISP_LENGTH - strlen(content));
+    disp_print(content);
+}
+
+void disp_printEnd(char c){ 
+    disp_setCursor(DISP_LENGTH - 1);
+    disp_print(c);
+}
+
+void disp_printEnd(int num){
+    char _num [11] = "";
+    itoa(num, _num, 10);
+
+    disp_printEnd(_num);
+}
+
 
 int main(){
     printf("Print string\n");
@@ -170,22 +143,40 @@ int main(){
     printf("Print integer\n");
     disp_clear();
     disp_setCursor(0);
-    disp_print(1234);
+    disp_print(42);
 
     debug_disp_content();
 
     printf("Print negative integer\n");
     disp_clear();
     disp_setCursor(0);
-    disp_print(-123);
+    disp_print(-42);
 
     debug_disp_content();
 
+    printf("******* PRINT ON THE END *******\n\n");
+
+    printf("Print string on the end\n");
+    disp_clear();
+    disp_printEnd((char*) "DI");
+
+    debug_disp_content();
+
+    printf("Print character on the end\n");
+    disp_clear();
+    disp_printEnd('D');
+
+    debug_disp_content();
 
     printf("Print integer on the end\n");
     disp_clear();
-    disp_setCursor(0);
-    disp_print_end(42);
+    disp_printEnd(42);
+
+    debug_disp_content();
+
+    printf("Print negative integer on the end\n");
+    disp_clear();
+    disp_printEnd(-42);
 
     debug_disp_content();
 
@@ -194,7 +185,7 @@ int main(){
     disp_setCursor(0);
     disp_print((char*)"HUMD");
 
-    disp_print_end(-42);
+    disp_printEnd(-42);
     
     debug_disp_content();
 
