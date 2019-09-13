@@ -1,7 +1,7 @@
 # White Led Digital Clock
 #### 01 de maio de 2019
 
-### OBS: As especificações do projeto podem ser modificadas no futuro.
+#### OBS: As especificações do projeto podem ser modificadas no futuro.
 
 A estrutura desse projeto foi feita com papelão e sucata.
 ---------------------------------------------------------------------------------------------------

@@ -58,7 +58,7 @@ byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
     'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
 };
-int seven_seg_ascii_init = (int) seven_seg_asciis[0]; // First mapped ascci position
+int seven_seg_ascii_init = '*'; // First mapped ascci position
 
 // Content
 byte disp_content [DISP_LENGTH];
@@ -67,7 +67,7 @@ int disp_content_cursor = 0;
 
 // Debug
 void debug_disp_content(){
-    printf("disp_content_cursor = %i\n", disp_content_cursor);
+    //printf("disp_content_cursor = %i\n", disp_content_cursor);
     for(int i = 0; i < DISP_LENGTH; i++)
         printf("[%c]", disp_content[i]);
     
@@ -89,32 +89,6 @@ void disp_print(char c){
     disp_content_cursor++;
 }
 
-void disp_print(int num){
-    /*
-    void seven_seg_numbers_extract(int number, int digit, boolean show_zero){
-    int powered = pow(10, digit);
-    return((number / powered) % 10) > 0 || (show_zero ? true : number >= powered * 10) ? seven_seg_numbers[(number / powered) % 10] : 0x00;
-    }
-    */
-
-    /*
-    Printing number formats
-
-    Normal print
-    {cursor = 1}
-    [ ], [4], [2], [ ]
-
-    Fullscreen right
-    {cursor = 0}
-    [ ], [ ], [4], [2]
-
-    Fullscreen left
-    {cursor = 0}
-    [4], [2], [ ], [0]
-
-    */
-}
-
 void disp_print(char content []){
     //printf("Content length: %i\n", strlen(content));
 
@@ -131,25 +105,58 @@ void disp_print(char content []){
     }
 }
 
-int main(){
-    // Print diferent Types
-    disp_clear();
-    disp_setCursor(0);
-    disp_print('H');
+void disp_print_end(int num){
+    char _num [11] = "";
 
-    disp_setCursor(2);
-    disp_print((char*) "10");
+    itoa(num, _num, 10);
     
-    debug_disp_content();
+    //disp_clear();
+    disp_setCursor(DISP_LENGTH - strlen(_num));
+    disp_print(_num);
+}
 
-    // Print string
+void disp_print(int num){
+    char _num [11] = "";
+
+    itoa(num, _num, 10);
+    
+    disp_print(_num);
+
+    //for(int i = 0; i < strlen(_num); i++){
+    //    printf("[%i]: %c\n", i, _num[i]);
+    //}
+
+
+    /*
+    void seven_seg_numbers_extract(int number, int digit, boolean show_zero){
+    int powered = pow(10, digit);
+    return((number / powered) % 10) > 0 || (show_zero ? true : number >= powered * 10) ? seven_seg_numbers[(number / powered) % 10] : 0x00;
+    }
+    */
+
+    /*
+    Printing number formats
+    Normal print
+    {cursor = 1}
+    [ ], [4], [2], [ ]
+    Fullscreen right
+    {cursor = 0}
+    [ ], [ ], [4], [2]
+    Fullscreen left
+    {cursor = 0}
+    [4], [2], [ ], [0]
+    */
+}
+
+int main(){
+    printf("Print string\n");
     disp_clear();
     disp_setCursor(0);
     disp_print((char*) "DAVI INACIO");
 
     debug_disp_content();
 
-    // Print character
+    printf("Print per character\n");
     disp_clear();
     disp_setCursor(0);
     
@@ -160,16 +167,36 @@ int main(){
 
     debug_disp_content();
 
-    // Print integer
+    printf("Print integer\n");
     disp_clear();
     disp_setCursor(0);
-    disp_print(10);
-
-    disp_setCursor(2);
-    disp_print((char*) "*C");
+    disp_print(1234);
 
     debug_disp_content();
+
+    printf("Print negative integer\n");
+    disp_clear();
+    disp_setCursor(0);
+    disp_print(-123);
+
+    debug_disp_content();
+
+
+    printf("Print integer on the end\n");
+    disp_clear();
+    disp_setCursor(0);
+    disp_print_end(42);
+
+    debug_disp_content();
+
+    printf("Print diferent Types\n");
+    disp_clear();
+    disp_setCursor(0);
+    disp_print((char*)"HUMD");
+
+    disp_print_end(-42);
     
-    // Debug
+    debug_disp_content();
+
     system("PAUSE");
 }
