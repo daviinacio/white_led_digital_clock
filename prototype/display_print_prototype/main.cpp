@@ -16,8 +16,9 @@
 // Abstraction from the real code
 #define DISP_LENGTH 4
 
-#include <iostream>
-#include <windows.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <math.h>
 
 /*
@@ -40,7 +41,7 @@ e         c
 
 // ASCII map for seven Segments
 // TODO: This will will replaced for binary content
-byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
+unsigned char seven_seg_asciis [((int) 'Z' - '*') + 1] = {
     '*',
     // Especial characters
     0x00, 0x00,
@@ -61,7 +62,7 @@ byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
 int seven_seg_ascii_init = '*'; // First mapped ascci position
 
 // Content
-byte disp_content [DISP_LENGTH];
+unsigned char disp_content [DISP_LENGTH];
 // Cursor
 int disp_content_cursor = 0;
 
