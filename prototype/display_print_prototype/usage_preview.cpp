@@ -44,18 +44,17 @@ void thr_main_func(){
 			disp_setCursor(0);
 			disp_print("BR");
 			disp_printEnd((int) disp_brightness_buffer.getAverage());
-
 			break;
 
-                case MAIN_SCREEN_CHRONOMETER:
+        case MAIN_SCREEN_CHRONOMETER:
 			disp_clear();
 			disp_printEnd(chronometer_counter);
-                        break;
+            break;
 
-                default:
+        default:
 			disp_clear();
 			disp_setCursor(0);
 			disp_print("UNKOWN ERROR");
-                        break;
+            break;
         }
 }
