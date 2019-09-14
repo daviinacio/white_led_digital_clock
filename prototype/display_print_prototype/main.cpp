@@ -39,6 +39,9 @@ e         c
 
 */
 
+using namespace std;
+
+
 // ASCII map for seven Segments
 // TODO: This will will replaced for binary content
 unsigned char seven_seg_asciis [((int) 'Z' - '*') + 1] = {
@@ -98,7 +101,8 @@ void disp_print(char content []){
 void disp_print(int num){
     char _num [11] = "";
 
-    itoa(num, _num, 10);
+    //itoa(num, _num, 10);
+    sprintf(_num, "%d", num);
     
     disp_print(_num);
 }
@@ -116,7 +120,8 @@ void disp_printEnd(char c){
 
 void disp_printEnd(int num){
     char _num [11] = "";
-    itoa(num, _num, 10);
+    //itoa(num, _num, 10);
+    sprintf(_num, "%d", num);
 
     disp_printEnd(_num);
 }
@@ -201,5 +206,7 @@ int main(){
     
     debug_disp_content();
 
-    system("PAUSE");
+    int inp = 0;
+    scanf("%i", &inp);
+    //system("PAUSE");
 }
