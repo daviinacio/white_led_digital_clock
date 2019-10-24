@@ -20,14 +20,15 @@
 #define DISP_PIN_FIRST PB2
 #define DISP_PIN_LAST PB5
 
-#define MAIN_INTERVAL 100
+#define MAIN_INTERVAL 1000
 #define MAIN_SCREEN_HOME 1000
 #define MAIN_SCREEN_LDR 1001
 #define MAIN_SCREEN_CHRONOMETER 1002
+#define MAIN_SCREEN_REMOTE 1003
 
 #define CHRONOMETER_INTERVAL 1000
 
-#define RTC_INTERVAL 4000
+#define RTC_INTERVAL 20000
 
 #define DHT_INIT_VALUE -255
 #define DHT_PIN A0
@@ -43,20 +44,58 @@
 #define BZ_STATUS_OFF 1100
 #define BZ_STATUS_OLDCLOCK 1101
 
+#define SCROLL_INTERVAL 350
 
 // Binary data
-byte seven_seg_numbers [10] = {
-  0b11111100, // 0
-  0b01100000, // 1
-  0b11011010, // 2
-  0b11110010, // 3
-  0b01100110, // 4
-  0b10110110, // 5
-  0b10111110, // 6
-  0b11100100, // 7
-  0b11111110, // 8
-  0b11110110  // 9
+byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
+  0b11000110,   // * represents °
+  0x00, 0x00,   // Unmapped characters
+  0b00000010,   // -
+  0x00, 0x00,   // Unmapped characters
+  
+  // Numbers
+  0b11111100,   // 0
+  0b01100000,   // 1
+  0b11011010,   // 2
+  0b11110010,   // 3
+  0b01100110,   // 4
+  0b10110110,   // 5
+  0b10111110,   // 6
+  0b11100000,   // 7
+  0b11111110,   // 8
+  0b11110110,   // 9
+  
+  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   // Unmapped characters
+  
+  // Alfabetic characters 
+  0b11101110,   // A
+  0b00111110,   // B
+  0b10011100,   // C
+  0b01111010,   // D
+  0b10011110,   // E
+  0b10001110,   // F
+  0b11110110,   // G
+  0b01101110,   // H
+  0b00001100,   // I
+  0b01111000,   // J
+  0b00011110,   // K
+  0b00011100,   // L
+  0b10101000,   // M
+  0b00101010,   // N
+  0b00111010,   // O
+  0b11001110,   // P
+  0b11100110,   // Q
+  0b00001010,   // R
+  0b10110110,   // S
+  0b01100010,   // T
+  0b00111000,   // U
+  0b01111100,   // V
+  0b01010100,   // W
+  0b10010010,   // X
+  0b01110110,   // Y
+  0b11011010    // Z
 };
+int seven_seg_ascii_init = '*'; // First mapped ascci position
 
 // Library imports
 #include <Thread.h>
@@ -81,6 +120,7 @@ Thread thr_rtc = Thread();
 Thread thr_dht = Thread();
 Thread thr_ir = Thread();
 Thread thr_buzzer = Thread();
+Thread thr_scroll = Thread();
 //Thread thr_panel = Thread();
 
 // Display
@@ -90,6 +130,8 @@ Buffer disp_brightness_buffer(DISP_BR_BUFFER_LENGTH, DISP_BR_MAX);
 
 int disp_count = 0; 
 int disp_digit = 0;
+
+int disp_content_cursor = 0;
 
 // RTC
 RTC_DS1307 rtc;
@@ -113,6 +155,11 @@ int chronometer_counter = 0;
 
 // Buzzer
 int buzzer_status = BZ_STATUS_OFF;
+
+// Scroll
+String disp_scroll_buffer;
+int disp_scroll_cursor_init = 0;
+bool disp_scroll_dir = false; // true: right | false: left
 
 // DEBUG
 int debug_thread_loop_tester = 0;
@@ -170,6 +217,9 @@ void setup() {
   thr_buzzer.onRun(thr_buzzer_func);
   thr_buzzer.setInterval(BZ_INTERVAL);
 
+  thr_scroll.onRun(thr_scroll_func);
+  thr_scroll.setInterval(SCROLL_INTERVAL);
+
   //thr_panel.onRun(thread_panel_loop);
   //thr_panel.setInterval(1000);
 
@@ -182,6 +232,7 @@ void setup() {
   cpu.add(&thr_dht);
   cpu.add(&thr_ir);
   cpu.add(&thr_buzzer);
+  cpu.add(&thr_scroll);
   
   /*    *  LIBRARY BEGINNERS  *    */
 
@@ -220,27 +271,20 @@ void setup() {
 
   /*    *     END OF BOOT     *    */
 
-  disp_content[0] = 0b01111010; // d
-  disp_content[1] = 0b11101110; // a
-  disp_content[2] = 0b01111100; // v
-  disp_content[3] = 0b00001100; // i
+  thr_scroll.enabled = false;
 
+  disp_clear();
+  disp_setCursor(0);
+  disp_print((char*) "DAVI");
+
+  // DEBUG
   //thr_ldr.enabled = false;
-  //disp_brightness = DISP_BR_MAX;
+  //disp_brightness_buffer.fill(DISP_BR_MAX);
 }
 
 void loop() {
   // Run the main thread controller
   cpu.run();
-
-  // DEBUG
-//  int toshow = disp_brightness;
-//
-//  disp_content[0] = ((toshow / 1000) % 10) > 0 || toshow >= 10000 ? seven_seg_numbers[(toshow / 1000) % 10] : 0x00;
-//  disp_content[1] = ((toshow / 100) % 10) > 0 || toshow >= 1000 ? seven_seg_numbers[(toshow / 100) % 10] : 0x00;
-//  disp_content[2] = ((toshow / 10) % 10) > 0 || toshow >= 100 ? seven_seg_numbers[(toshow / 10) % 10] : 0x00;;
-//  disp_content[3] = seven_seg_numbers[(toshow       ) % 10];
-
 }
 
 /*    *    *    *    THREAD    *    *    *    */
@@ -250,53 +294,66 @@ void thr_main_func() {
   
   switch(main_current_screen){
     case MAIN_SCREEN_HOME:
+      thr_main.setInterval(MAIN_INTERVAL);
+    
       // Initial interval
       if(m <= 2000){ /* Do nothing */ } else
       
       // Temperature
       if(m / 2000 % 10 == 8 && dht_temp_buffer.getAverage() != DHT_INIT_VALUE){           // Each 20s, runs on 16s, per 2s
-        disp_content[0] = seven_seg_numbers[((int) dht_temp_buffer.getAverage()) / 10];   // 0 - 9
-        disp_content[1] = seven_seg_numbers[((int) dht_temp_buffer.getAverage()) % 10];   // 0 - 9
-        disp_content[2] = 0b11000110;                                 // °
-        disp_content[3] = 0b10011100;                                 // C
+        disp_clear();
+        disp_setCursor(0);
+        disp_print((int) dht_temp_buffer.getAverage());
+        disp_print((char*)"*C");
       } else
       
       // Humidity
       if(m / 2000 % 10 == 9 && dht_hum_buffer.getAverage() != DHT_INIT_VALUE){            // Each 20s, runs on 18s, per 2s
-        disp_content[0] = 0b01101110;                                 // H
-        disp_content[1] = 0x00;                                       // null
-        disp_content[2] = seven_seg_numbers[((int) dht_hum_buffer.getAverage()) / 10];    // 0 - 9
-        disp_content[3] = seven_seg_numbers[((int) dht_hum_buffer.getAverage()) % 10];    // 0 - 9
+        disp_clear();
+        disp_setCursor(0);
+        disp_print('H');
+        disp_printEnd((int) dht_hum_buffer.getAverage());
       }
       
       // Hours and Minutes
       else {                                                          // Runs when others 'IFs' are false
-        disp_content[0] = seven_seg_numbers[rtc_now.hour() / 10];     // 0 - 9
-        disp_content[1] = seven_seg_numbers[rtc_now.hour() % 10];     // 0 - 9
-        disp_content[2] = seven_seg_numbers[rtc_now.minute() / 10];   // 0 - 9
-        disp_content[3] = seven_seg_numbers[rtc_now.minute() % 10];   // 0 - 9
+        disp_clear();
+        disp_setCursor(0);
+        
+        if(rtc_now.hour() < 10)
+          disp_print(0);
+        disp_print(rtc_now.hour());
+
+        if(rtc_now.minute() < 10)
+          disp_print(0);
+        disp_print(rtc_now.minute());
       }
       break;
 
     case MAIN_SCREEN_LDR:
-      disp_content[0] = 0b00111110;   // b
-      disp_content[1] = 0b00001010;   // r
-      disp_content[2] = ((disp_brightness_buffer.getAverage() / 10) % 10) > 0 || disp_brightness_buffer.getAverage() >= 100 ? seven_seg_numbers[(disp_brightness_buffer.getAverage() / 10) % 10] : 0x00;
-      disp_content[3] = ((disp_brightness_buffer.getAverage() / 1) % 10) > 0 || disp_brightness_buffer.getAverage() >= 10 ? seven_seg_numbers[(disp_brightness_buffer.getAverage() / 1) % 10] : 0x00;
+      thr_main.setInterval(250);
+      disp_clear();
+      disp_setCursor(0);
+      disp_print((char*)"BR");
+      disp_printEnd((int) disp_brightness_buffer.getAverage());
       break;
 
     case MAIN_SCREEN_CHRONOMETER:
-      // Put the last digits of number on the display content array
-      for(int i = 0; i < DISP_LENGTH; i++)
-        disp_content[i] = ((chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10) > 0 || chronometer_counter >= (int) pow(10, DISP_LENGTH - i) || (chronometer_counter == 0 && i == DISP_LENGTH - 1) ? seven_seg_numbers[(chronometer_counter / (int) pow(10, DISP_LENGTH - i - 1)) % 10] : 0x00;
-        break;
+      thr_main.setInterval(CHRONOMETER_INTERVAL);
+      disp_clear();
+      disp_printEnd(chronometer_counter);
+      break;
 
-      default:
-        disp_content[0] = 0b11101100; // m
-        disp_content[1] = 0b10011110; // e
-        disp_content[2] = 0b00001010; // r
-        disp_content[3] = 0b00001010; // r
-        break;
+    case MAIN_SCREEN_REMOTE:
+      unsigned long value = ir_results.value;
+      disp_scroll("  0x" + String(value, 16) + "  " , 1000);
+      break;
+
+    default:
+      disp_clear();
+      disp_setCursor(0);
+      disp_print("MERR");
+      break;
   }
 }
 
@@ -347,11 +404,11 @@ void thr_ir_func(){
     ir_recv.resume();
 
     // Temporary variable
-    float tp;
+    int tp;
 
     switch(value){
       case 0xC26BF044: buzzer_status = BZ_STATUS_OLDCLOCK; break; // Up
-      case 0xC4FFB646:  break; // Down
+      case 0xC4FFB646: dht_temp_buffer.fill(-42); break; // Down
       case 0x758C9D82:  break; // Left
       case 0x53801EE8:  break; // Right
       case 0x8AF13528: buzzer_status = BZ_STATUS_OFF; break; // Center
@@ -364,6 +421,8 @@ void thr_ir_func(){
         
         tp = disp_brightness_buffer.getAverage();
         tp += DISP_BR_MAX/8;
+
+        if(tp % 2 != 0) tp -= 1;
         if(tp > DISP_BR_MAX) tp = DISP_BR_MAX;
 
         disp_brightness_buffer.fill(tp);
@@ -379,14 +438,33 @@ void thr_ir_func(){
         disp_brightness_buffer.fill(tp);
         break; // Vol-
         
-      case 0x2340B922:  thr_ldr.enabled = true; break; // Mute
-      
-      case 0x6BDD79E6:  break; // Content
+      case 0x2340B922:
+        if(!thr_ldr.enabled)
+          disp_scroll("AUTO", 1500);
+        thr_ldr.enabled = true; break;
+        // Mute
+
+      case 0XCE3693E6:  disp_scroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
+      case 0x6BDD79E6:  disp_scroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250); break; // Content
   
-      case 0xDAEA83EC:  main_current_screen = MAIN_SCREEN_LDR; break; // A
-      case 0x2BAFCEEC:  main_current_screen = MAIN_SCREEN_CHRONOMETER; break; // B
-      case 0xB5210DA6:  break; // C
-      case 0x71A1FE88:  break; // D
+      case 0xDAEA83EC:
+        if(main_current_screen != MAIN_SCREEN_LDR)
+          disp_scroll("   BRILHO   ");
+          
+        main_current_screen = MAIN_SCREEN_LDR;
+      break; // A
+      
+      case 0x2BAFCEEC:
+        if(main_current_screen != MAIN_SCREEN_CHRONOMETER)
+          disp_scroll("   CRONOMETRO   ");
+        main_current_screen = MAIN_SCREEN_CHRONOMETER;
+        break; // B
+      case 0xB5210DA6:
+        if(main_current_screen != MAIN_SCREEN_REMOTE)
+          disp_scroll("   CONTROLE HEX   ");
+        main_current_screen = MAIN_SCREEN_REMOTE;
+        break; // C
+      case 0x71A1FE88: break; // D
   
       case 0x6A618E02:
         if(main_current_screen == MAIN_SCREEN_CHRONOMETER) thr_chronometer.enabled = true;
@@ -421,6 +499,22 @@ void thr_buzzer_func(){
   }
 }
 
+void thr_scroll_func(){
+  //if(disp_scroll_dir ? (disp_scroll_cursor_init))
+
+  disp_clear();
+  disp_setCursor(0);
+  disp_print(disp_scroll_buffer.substring(disp_scroll_cursor_init, disp_scroll_cursor_init + DISP_LENGTH).c_str());
+
+  disp_scroll_cursor_init++;
+
+  // Disable scroll and back to the main
+  if(disp_scroll_cursor_init > (disp_scroll_buffer.length() - DISP_LENGTH + 1)){
+    thr_scroll.enabled = false;
+    thr_main.enabled = true;
+  }
+}
+
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
   // Clean display
@@ -448,6 +542,9 @@ ISR(TIMER2_COMPA_vect){
   disp_count %= DISP_BR_MAX * DISP_LENGTH;
 }
 
+/* UPDATE * UPDATE  * UPDATE  * 1.1 * UPDATE * UPDATE  * UPDATE*/
+// 13/09/2019 -> Friday | Programmer day
+
 void DispTimer_enable(){
   TIMSK2 |= (1 << OCIE2A); // enable timer compare interrupt
 }
@@ -455,4 +552,63 @@ void DispTimer_enable(){
 void DispTimer_disable(){
   TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
   PORTD = 0xff;             // Clean display
+}
+
+
+// Display print
+void disp_setCursor(int col){
+  disp_content_cursor = col % DISP_LENGTH;
+}
+
+void disp_clear(){
+  for(int i = 0; i < DISP_LENGTH; i++)
+    disp_content[i] = 0x00;
+}
+
+void disp_print(char c){
+  c = toupper(c);
+  disp_content[disp_content_cursor] = seven_seg_asciis[((int) c) - seven_seg_ascii_init]; //content[i];
+  disp_content_cursor++;
+}
+
+void disp_print(const char* content){
+  for(int i = 0; i < strlen(content) && disp_content_cursor < DISP_LENGTH; i++)
+    disp_print(content[i]);
+}
+
+void disp_print(int num){
+  char _num [11] = "";
+  itoa(num, _num, 10);
+  disp_print(_num);
+}
+
+// Display print on the end
+void disp_printEnd(const char* content){
+  disp_setCursor(DISP_LENGTH - strlen(content));
+  disp_print(content);
+}
+
+void disp_printEnd(char c){ 
+  disp_setCursor(DISP_LENGTH - 1);
+  disp_print(c);
+}
+
+void disp_printEnd(int num){
+  char _num [11] = "";
+  itoa(num, _num, 10);
+  disp_printEnd(_num);
+}
+
+// Scroll
+void disp_scroll(String content, int interval){
+  disp_scroll_cursor_init = 0;
+  disp_scroll_buffer = content;
+  //disp_scroll_dir = true;
+  thr_scroll.enabled = true;
+  thr_main.enabled = false;
+  thr_scroll.setInterval(interval);
+}
+
+void disp_scroll(String content){
+  disp_scroll(content, SCROLL_INTERVAL);
 }
