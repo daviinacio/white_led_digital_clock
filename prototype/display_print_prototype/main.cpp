@@ -19,7 +19,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <string>
 #include <math.h>
+
+using namespace std;
 
 /*
 // Seven Segments Display Abstraction
@@ -93,25 +96,44 @@ void disp_print(char c){
     disp_content_cursor++;
 }
 
-void disp_print(char content []){
-    for(int i = 0; i < strlen(content) && disp_content_cursor < DISP_LENGTH; i++)
+void disp_print(std::string content){
+    const char* _content = content.c_str();
+    for(int i = 0; i < strlen(_content) && disp_content_cursor < DISP_LENGTH; i++)
         disp_print(content[i]);
 }
 
+// void disp_print(char content []){
+//     for(int i = 0; i < strlen(content) && disp_content_cursor < DISP_LENGTH; i++)
+//         disp_print(content[i]);
+// }
+
+// void disp_print(string content){
+//     disp_print(content);
+// }
+
 void disp_print(int num){
     char _num [11] = "";
-
     //itoa(num, _num, 10);
     sprintf(_num, "%d", num);
-    
     disp_print(_num);
 }
 
 // Print on the end
-void disp_printEnd(char content []){
-    disp_setCursor(DISP_LENGTH - strlen(content));
-    disp_print(content);
+void disp_printEnd(std::string content){
+    const char* _content = content.c_str();
+
+    disp_setCursor(DISP_LENGTH - strlen(_content));
+    disp_print(_content);
 }
+
+// void disp_printEnd(char content []){
+//     disp_setCursor(DISP_LENGTH - strlen(content));
+//     disp_print(content);
+// }
+
+// void disp_printEnd(string content){
+//     disp_printEnd(content);
+// }
 
 void disp_printEnd(char c){ 
     disp_setCursor(DISP_LENGTH - 1);
@@ -131,7 +153,7 @@ int main(){
     printf("Print string\n");
     disp_clear();
     disp_setCursor(0);
-    disp_print((char*) "DAVI INACIO");
+    disp_print("DAVI INACIO");
 
     debug_disp_content();
 
@@ -164,7 +186,7 @@ int main(){
 
     printf("Print string on the end\n");
     disp_clear();
-    disp_printEnd((char*) "DI");
+    disp_printEnd("DI");
 
     debug_disp_content();
 
@@ -189,7 +211,7 @@ int main(){
     printf("Print diferent Types\n");
     disp_clear();
     disp_setCursor(0);
-    disp_print((char*)"HUMD");
+    disp_print("HUMD");
 
     disp_printEnd(-42);
     
@@ -202,7 +224,7 @@ int main(){
     disp_print(0);
     disp_setCursor(temp > 0 && temp < 10 ? 1 : 0);
     disp_print(temp);
-    disp_print((char*)"*C");
+    disp_print("*C");
     
     debug_disp_content();
 
