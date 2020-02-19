@@ -1,5 +1,5 @@
 /*
-* (c) daviapps 2019
+ * (c) daviapps 2019
  * 
  * White LED Digital Clock 
  * 
@@ -273,6 +273,7 @@ void setup() {
 
     // Goto time adjust screen
     main_current_screen = MAIN_SCREEN_TIME_ADJUST;
+    time_adjust_cursor = 0;
     thr_rtc.enabled = false;
   }
 
@@ -598,6 +599,7 @@ void thr_ir_func(){
         
         thr_rtc.enabled = false;
         main_current_screen = MAIN_SCREEN_TIME_ADJUST;
+        time_adjust_cursor = 0;
         break; // D
   
       case 0x6A618E02:
