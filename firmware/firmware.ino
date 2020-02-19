@@ -262,7 +262,7 @@ void setup() {
     while(millis() < 5000){
       if(millis()/500 % 3 >= 1){
         disp_setCursor(0);
-        disp_print((char*) "ERRO");
+        disp_print((char*)"ERRO");
       } else {
         disp_clear();
       }
@@ -289,7 +289,7 @@ void setup() {
 
   disp_clear();
   disp_setCursor(0);
-  disp_print((char*) "DAVI");
+  disp_print((char*)"DAVI");
 
   // DEBUG
   //thr_ldr.enabled = false;
@@ -363,7 +363,7 @@ void thr_main_func() {
         disp_setCursor(0);
 
         if(time_adjust_cursor == 0 && millis()/500 % 3 == 0){   // Blink 1/3 on focus
-          disp_print("  ");
+          disp_print((char*)"  ");
         }
         else {
           if(time_adjust_hour < 10)
@@ -372,7 +372,7 @@ void thr_main_func() {
         }
 
         if(time_adjust_cursor == 1 && millis()/500 % 3 == 0){   // Blink 1/3 on focus
-          disp_print("  ");
+          disp_print((char*)"  ");
         }
         else {
           if(time_adjust_minute < 10)
@@ -383,10 +383,10 @@ void thr_main_func() {
       else
       if(time_adjust_cursor == 2){  // Day
         disp_setCursor(0);
-        disp_print("D ");
+        disp_print((char*)"D ");
 
         if(millis()/500 % 3 == 0){  // Blink 1/3 on focus
-          disp_print("  ");
+          disp_print((char*)"  ");
         }
         else {
           disp_printEnd(time_adjust_day);
@@ -395,10 +395,10 @@ void thr_main_func() {
       else
       if(time_adjust_cursor == 3){  // Month
         disp_setCursor(0);
-        disp_print("M ");
+        disp_print((char*)"M ");
 
         if(millis()/500 % 3 == 0){  // Blink 1/3 on focus
-          disp_print("  ");
+          disp_print((char*)"  ");
         }
         else {
           disp_printEnd(time_adjust_month);
@@ -407,10 +407,10 @@ void thr_main_func() {
       else
       if(time_adjust_cursor == 4){  // Year
         disp_setCursor(0);
-        disp_print("Y ");
+        disp_print((char*)"Y ");
 
         if(millis()/500 % 3 == 0){  // Blink 1/3 on focus
-          disp_print("  ");
+          disp_print((char*)"  ");
         }
         else {
           disp_printEnd(time_adjust_year);
@@ -421,7 +421,7 @@ void thr_main_func() {
     default:
       disp_clear();
       disp_setCursor(0);
-      disp_print("MERR");
+      disp_print((char*)"MERR");
       break;
   }
 }
