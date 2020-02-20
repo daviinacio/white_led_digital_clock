@@ -50,7 +50,14 @@
 #define ADJUST_CURSOR_RANGE 5
 
 // Binary data
-byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
+byte seven_seg_asciis [((int) 'Z' - ' ') + 1] = {
+  0b00000000,   // Space
+  0x00, 0x00,   // Unmapped characters
+  0x00, 0x00,   // Unmapped characters
+  0x00, 0x00,   // Unmapped characters
+  0x00, 0x00,   // Unmapped characters
+  0x00,         // Unmapped characters
+  
   0b11000110,   // * represents °
   0x00, 0x00,   // Unmapped characters
   0b00000010,   // -
@@ -83,7 +90,7 @@ byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
   0b01111000,   // J
   0b00011110,   // K
   0b00011100,   // L
-  0b10101000,   // M
+  0b10101010,   // M
   0b00101010,   // N
   0b00111010,   // O
   0b11001110,   // P
@@ -98,7 +105,7 @@ byte seven_seg_asciis [((int) 'Z' - '*') + 1] = {
   0b01110110,   // Y
   0b11011010    // Z
 };
-int seven_seg_ascii_init = '*'; // First mapped ascci position
+int seven_seg_ascii_init = ' '; // First mapped ascci position
 
 // Library imports
 #include <Thread.h>
@@ -172,6 +179,8 @@ int time_adjust_month = 0;
 int time_adjust_day = 0;
 int time_adjust_hour = 0;
 int time_adjust_minute = 0;
+
+bool time_adjust_cursor_blink = false;
 
 // DEBUG
 int debug_thread_loop_tester = 0;
@@ -257,7 +266,7 @@ void setup() {
 
   /*    *   CHECK COMPONENTS  *    */
 
-  if (!rtc.isrunning() || rtc.lostPower()) {
+  if (!rtc.isrunning()) {
     // Blink error for five seconds
     while(millis() < 5000){
       if(millis()/500 % 3 >= 1){
@@ -292,8 +301,8 @@ void setup() {
   disp_print((char*)"DAVI");
 
   // DEBUG
-  //thr_ldr.enabled = false;
-  //disp_brightness_buffer.fill(DISP_BR_MAX);
+  thr_ldr.enabled = false;
+  disp_brightness_buffer.fill(DISP_BR_MAX);
 }
 
 void loop() {
@@ -323,7 +332,7 @@ void thr_main_func() {
       // Humidity
       if(m / 2000 % 10 == 9 && dht_hum_buffer.getAverage() != DHT_INIT_VALUE){  // Each 20s, runs on 18s, per 2s
         disp_setCursor(0);
-        disp_print('H');
+        disp_print((char*)"H ");
         disp_printEnd((int) dht_hum_buffer.getAverage());
       }
       
@@ -353,16 +362,13 @@ void thr_main_func() {
       disp_printEnd(chronometer_counter);
       break;
 
-    case MAIN_SCREEN_REMOTE:
-      unsigned long value = ir_results.value;
-      disp_scroll("  0x" + String(value, 16) + "  " , 1000);
-      break;
-
     case MAIN_SCREEN_TIME_ADJUST:
+      disp_setCursor(0);
+    
       if(time_adjust_cursor == 0 || time_adjust_cursor == 1){  // Minutes & Hours
         disp_setCursor(0);
 
-        if(time_adjust_cursor == 0 && millis()/500 % 3 == 0){   // Blink 1/3 on focus
+        if((time_adjust_cursor == 0 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -371,7 +377,7 @@ void thr_main_func() {
           disp_print(time_adjust_hour);
         }
 
-        if(time_adjust_cursor == 1 && millis()/500 % 3 == 0){   // Blink 1/3 on focus
+        if((time_adjust_cursor == 1 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -385,7 +391,7 @@ void thr_main_func() {
         disp_setCursor(0);
         disp_print((char*)"D ");
 
-        if(millis()/500 % 3 == 0){  // Blink 1/3 on focus
+        if((millis()/500 % 3 == 0) && time_adjust_cursor_blink){  // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -397,7 +403,7 @@ void thr_main_func() {
         disp_setCursor(0);
         disp_print((char*)"M ");
 
-        if(millis()/500 % 3 == 0){  // Blink 1/3 on focus
+        if((millis()/500 % 3 == 0) && time_adjust_cursor_blink){  // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -409,13 +415,18 @@ void thr_main_func() {
         disp_setCursor(0);
         disp_print((char*)"Y ");
 
-        if(millis()/500 % 3 == 0){  // Blink 1/3 on focus
+        if((millis()/500 % 3 == 0) && time_adjust_cursor_blink){  // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
-          disp_printEnd(time_adjust_year);
+          disp_printEnd(time_adjust_year % 100);
         }
       }
+      break;
+
+    case MAIN_SCREEN_REMOTE:
+      unsigned long value = ir_results.value;
+      disp_scroll("  0x" + String(value, 16) + "  " , 1000);
       break;
 
     default:
@@ -481,9 +492,10 @@ void thr_ir_func(){
           buzzer_status = BZ_STATUS_OLDCLOCK;
         else
         if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
+          time_adjust_cursor_blink = false;
           switch(time_adjust_cursor){
-            case 0: if(time_adjust_minute < 59) time_adjust_minute++; break;
-            case 1: if(time_adjust_hour < 23) time_adjust_hour++; break;
+            case 0: if(time_adjust_hour < 23) time_adjust_hour++; break;
+            case 1: if(time_adjust_minute < 59) time_adjust_minute++; break;
             case 2: if(time_adjust_day < 31) time_adjust_day++; break;
             case 3: if(time_adjust_month < 12) time_adjust_month++; break;
             case 4: if(time_adjust_year < 2100) time_adjust_year++; break;
@@ -496,9 +508,10 @@ void thr_ir_func(){
           dht_temp_buffer.fill(-42);
         else
         if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
+          time_adjust_cursor_blink = false;
           switch(time_adjust_cursor){
-            case 0: if(time_adjust_minute > 0) time_adjust_minute--; break;
-            case 1: if(time_adjust_hour > 0) time_adjust_hour--; break;
+            case 0: if(time_adjust_hour > 0) time_adjust_hour--; break;
+            case 1: if(time_adjust_minute > 0) time_adjust_minute--; break;
             case 2: if(time_adjust_day > 0) time_adjust_day--; break;
             case 3: if(time_adjust_month > 0) time_adjust_month--; break;
             case 4: if(time_adjust_year > 2000) time_adjust_year--; break;
@@ -508,13 +521,15 @@ void thr_ir_func(){
 
       case 0x758C9D82: // Left
         if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
-          if(time_adjust_cursor < ADJUST_CURSOR_RANGE)
+          time_adjust_cursor_blink = false;
+          if(time_adjust_cursor < ADJUST_CURSOR_RANGE - 1)
             time_adjust_cursor++;
         }
         break;
 
       case 0x53801EE8: // Right
         if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
+          time_adjust_cursor_blink = false;
           if(time_adjust_cursor > 0)
             time_adjust_cursor--;
         }
@@ -532,7 +547,7 @@ void thr_ir_func(){
             time_adjust_year, time_adjust_month, time_adjust_day,
             time_adjust_hour, time_adjust_minute, 0
           ));
-          disp_scroll("SAVE");
+          disp_scroll("SAVE", 1500);
         }
 
         main_current_screen = MAIN_SCREEN_HOME;
@@ -589,15 +604,19 @@ void thr_ir_func(){
         break; // C
       case 0x71A1FE88:
         if(main_current_screen != MAIN_SCREEN_TIME_ADJUST)
-          disp_scroll("   TIME ADJUST   ");
+          disp_scroll("   SET TIME   ");
 
-        time_adjust_year = rtc_now.year();
-        time_adjust_month = rtc_now.month();
-        time_adjust_day = rtc_now.day();
-        time_adjust_hour = rtc_now.hour();
-        time_adjust_minute = rtc_now.minute();
+        if (rtc.isrunning()) {
+          rtc_now = rtc.now();
+          time_adjust_year = rtc_now.year();
+          time_adjust_month = rtc_now.month();
+          time_adjust_day = rtc_now.day();
+          time_adjust_hour = rtc_now.hour();
+          time_adjust_minute = rtc_now.minute();
+        }
         
         thr_rtc.enabled = false;
+        time_adjust_cursor_blink = true;
         main_current_screen = MAIN_SCREEN_TIME_ADJUST;
         time_adjust_cursor = 0;
         break; // D
@@ -618,6 +637,8 @@ void thr_ir_func(){
         break; // Stop
     }
   }
+  else
+    time_adjust_cursor_blink = true;
 }
 
 void thr_buzzer_func(){
