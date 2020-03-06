@@ -27,6 +27,7 @@ This is a digital led clock made based on arduino uno microcontroller.
 - Changes the display brightness automatically
 - Can be controlled by TV remote control
 - Time adjust
+- RCT Time Fix
 
 ## Files and Images
 
