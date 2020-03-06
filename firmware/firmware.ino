@@ -49,6 +49,8 @@
 
 #define ADJUST_CURSOR_RANGE 5
 
+#define RTC_FIX_INTERVAL // Place interval here
+
 // Binary data
 byte seven_seg_asciis [((int) 'Z' - ' ') + 1] = {
   0b00000000,   // Space
@@ -131,6 +133,7 @@ Thread thr_dht = Thread();
 Thread thr_ir = Thread();
 Thread thr_buzzer = Thread();
 Thread thr_scroll = Thread();
+Thread thr_rtc_fix = Thread();
 //Thread thr_panel = Thread();
 
 // Display
@@ -179,6 +182,7 @@ int time_adjust_month = 0;
 int time_adjust_day = 0;
 int time_adjust_hour = 0;
 int time_adjust_minute = 0;
+int time_adjust_second = 0;
 
 bool time_adjust_cursor_blink = false;
 
@@ -241,6 +245,9 @@ void setup() {
   thr_scroll.onRun(thr_scroll_func);
   thr_scroll.setInterval(SCROLL_INTERVAL);
 
+  thr_rtc_fix.onRun(thr_rtc_fix_func);
+  thr_rtc_fix.setInterval(RTC_FIX_INTERVAL);
+
   //thr_panel.onRun(thread_panel_loop);
   //thr_panel.setInterval(1000);
 
@@ -254,6 +261,7 @@ void setup() {
   cpu.add(&thr_ir);
   cpu.add(&thr_buzzer);
   cpu.add(&thr_scroll);
+  cpu.add(&thr_rtc_fix);
   
   /*    *  LIBRARY BEGINNERS  *    */
 
@@ -301,8 +309,8 @@ void setup() {
   disp_print((char*)"DAVI");
 
   // DEBUG
-  thr_ldr.enabled = false;
-  disp_brightness_buffer.fill(DISP_BR_MAX);
+  //thr_ldr.enabled = false;
+  //disp_brightness_buffer.fill(DISP_BR_MAX);
 }
 
 void loop() {
@@ -670,6 +678,28 @@ void thr_scroll_func(){
     thr_scroll.enabled = false;
     thr_main.enabled = true;
   }
+}
+
+void thr_rtc_fix_func(){
+  // Read current time
+  rtc_now = rtc.now();
+
+  // Get current time
+  time_adjust_year = rtc_now.year();
+  time_adjust_month = rtc_now.month();
+  time_adjust_day = rtc_now.day();
+  time_adjust_hour = rtc_now.hour();
+  time_adjust_minute = rtc_now.minute();
+  time_adjust_second = rtc_now.second();
+
+  // Back one second
+  time_adjust_second--;
+
+  // Adjust the time
+  rtc.adjust(DateTime(
+    time_adjust_year, time_adjust_month, time_adjust_day,
+    time_adjust_hour, time_adjust_minute, time_adjust_second
+  ));
 }
 
 /*    *    *    *    TIMER2    *    *    *    */
