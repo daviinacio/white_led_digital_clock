@@ -49,7 +49,7 @@
 
 #define ADJUST_CURSOR_RANGE 5
 
-#define RTC_FIX_INTERVAL // Place interval here
+#define RTC_FIX_INTERVAL 6627
 
 // Binary data
 byte seven_seg_asciis [((int) 'Z' - ' ') + 1] = {
@@ -292,6 +292,7 @@ void setup() {
     main_current_screen = MAIN_SCREEN_TIME_ADJUST;
     time_adjust_cursor = 0;
     thr_rtc.enabled = false;
+    thr_rtc_fix.enabled = false;
   }
 
   /*    *   THREAD FIRST RUN  *    */
@@ -560,6 +561,7 @@ void thr_ir_func(){
 
         main_current_screen = MAIN_SCREEN_HOME;
         thr_rtc.enabled = true;
+        thr_rtc_fix.enabled = true;
         break;
       
       case 0x68733A46:  //disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; 
@@ -624,6 +626,7 @@ void thr_ir_func(){
         }
         
         thr_rtc.enabled = false;
+        thr_rtc_fix.enabled = false;
         time_adjust_cursor_blink = true;
         main_current_screen = MAIN_SCREEN_TIME_ADJUST;
         time_adjust_cursor = 0;
