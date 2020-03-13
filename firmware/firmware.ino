@@ -49,10 +49,15 @@
 
 #define ADJUST_CURSOR_RANGE 5
 
-#define RTC_FIX_INTERVAL 6627
+#define RTC_FIX_INTERVAL 150000   // 150s or 2.5m
+//#define RTC_FIX_INTERVAL 180000   // 180s or 3m
+#define RTC_FIX_OPERATION --
 
 // Binary data
-byte seven_seg_asciis [((int) 'Z' - ' ') + 1] = {
+const byte seven_seg_ascii_init = ' '; // First mapped ascci position
+const byte seven_seg_ascii_end  = 'Z'; // Last mapped ascci position
+
+const byte seven_seg_asciis [((int) seven_seg_ascii_end - seven_seg_ascii_init) + 1] = {
   0b00000000,   // Space
   0x00, 0x00,   // Unmapped characters
   0x00, 0x00,   // Unmapped characters
@@ -107,7 +112,6 @@ byte seven_seg_asciis [((int) 'Z' - ' ') + 1] = {
   0b01110110,   // Y
   0b11011010    // Z
 };
-int seven_seg_ascii_init = ' '; // First mapped ascci position
 
 // Library imports
 #include <Thread.h>
@@ -162,6 +166,7 @@ decode_results ir_results;
 
 // Main
 int main_current_screen = MAIN_SCREEN_HOME;
+bool main_change_loop = false;
 
 // Chronometer
 int chronometer_counter = 0;
@@ -290,7 +295,7 @@ void setup() {
 
     // Goto time adjust screen
     main_current_screen = MAIN_SCREEN_TIME_ADJUST;
-    time_adjust_cursor = 0;
+    time_adjust_cursor = 1;
     thr_rtc.enabled = false;
     thr_rtc_fix.enabled = false;
   }
@@ -310,8 +315,8 @@ void setup() {
   disp_print((char*)"DAVI");
 
   // DEBUG
-  //thr_ldr.enabled = false;
-  //disp_brightness_buffer.fill(DISP_BR_MAX);
+  thr_ldr.enabled = false;
+  disp_brightness_buffer.fill(DISP_BR_MAX);
 }
 
 void loop() {
@@ -331,22 +336,22 @@ void thr_main_func() {
       // Initial interval
       if(m <= 2000){ /* Do nothing */ } else
       
-      // Temperature
-      if(m / 2000 % 10 == 8 && dht_temp_buffer.getAverage() != DHT_INIT_VALUE){ // Each 20s, runs on 16s, per 2s
+      // Temperature                  // Each 20s, runs on 16s, per 2s
+      if(m / 2000 % 10 == 8 && dht_temp_buffer.getAverage() != DHT_INIT_VALUE && main_change_loop){
         disp_setCursor(0);
         disp_print((int) dht_temp_buffer.getAverage());
         disp_print((char*)"*C");
       } else
       
-      // Humidity
-      if(m / 2000 % 10 == 9 && dht_hum_buffer.getAverage() != DHT_INIT_VALUE){  // Each 20s, runs on 18s, per 2s
+      // Humidity                     // Each 20s, runs on 18s, per 2s
+      if(m / 2000 % 10 == 9 && dht_hum_buffer.getAverage() != DHT_INIT_VALUE && main_change_loop){
         disp_setCursor(0);
         disp_print((char*)"H ");
         disp_printEnd((int) dht_hum_buffer.getAverage());
       }
       
       // Hours and Minutes
-      else {                                                                    // Runs when others 'IFs' are false
+      else {                          // Runs when others 'IFs' are false
         disp_setCursor(0);
         
         if(rtc_now.hour() < 10)
@@ -377,7 +382,7 @@ void thr_main_func() {
       if(time_adjust_cursor == 0 || time_adjust_cursor == 1){  // Minutes & Hours
         disp_setCursor(0);
 
-        if((time_adjust_cursor == 0 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
+        if((time_adjust_cursor == 1 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -386,7 +391,7 @@ void thr_main_func() {
           disp_print(time_adjust_hour);
         }
 
-        if((time_adjust_cursor == 1 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
+        if((time_adjust_cursor == 0 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -503,8 +508,8 @@ void thr_ir_func(){
         if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
           time_adjust_cursor_blink = false;
           switch(time_adjust_cursor){
-            case 0: if(time_adjust_hour < 23) time_adjust_hour++; break;
-            case 1: if(time_adjust_minute < 59) time_adjust_minute++; break;
+            case 0: if(time_adjust_minute < 59) time_adjust_minute++; break;
+            case 1: if(time_adjust_hour < 23) time_adjust_hour++; break;
             case 2: if(time_adjust_day < 31) time_adjust_day++; break;
             case 3: if(time_adjust_month < 12) time_adjust_month++; break;
             case 4: if(time_adjust_year < 2100) time_adjust_year++; break;
@@ -519,8 +524,8 @@ void thr_ir_func(){
         if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
           time_adjust_cursor_blink = false;
           switch(time_adjust_cursor){
-            case 0: if(time_adjust_hour > 0) time_adjust_hour--; break;
-            case 1: if(time_adjust_minute > 0) time_adjust_minute--; break;
+            case 0: if(time_adjust_minute > 0) time_adjust_minute--; break;
+            case 1: if(time_adjust_hour > 0) time_adjust_hour--; break;
             case 2: if(time_adjust_day > 0) time_adjust_day--; break;
             case 3: if(time_adjust_month > 0) time_adjust_month--; break;
             case 4: if(time_adjust_year > 2000) time_adjust_year--; break;
@@ -554,7 +559,7 @@ void thr_ir_func(){
         if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
           rtc.adjust(DateTime(
             time_adjust_year, time_adjust_month, time_adjust_day,
-            time_adjust_hour, time_adjust_minute, 0
+            time_adjust_hour, time_adjust_minute, 1
           ));
           disp_scroll("SAVE", 1500);
         }
@@ -629,7 +634,7 @@ void thr_ir_func(){
         thr_rtc_fix.enabled = false;
         time_adjust_cursor_blink = true;
         main_current_screen = MAIN_SCREEN_TIME_ADJUST;
-        time_adjust_cursor = 0;
+        time_adjust_cursor = 1;
         break; // D
   
       case 0x6A618E02:
@@ -696,7 +701,7 @@ void thr_rtc_fix_func(){
   time_adjust_second = rtc_now.second();
 
   // Back one second
-  time_adjust_second--;
+  time_adjust_second -= 1;
 
   // Adjust the time
   rtc.adjust(DateTime(
