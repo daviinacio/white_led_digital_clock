@@ -1,5 +1,5 @@
 /*
- * (c) daviapps 2019
+ * (c) daviapps 2020
  * 
  * White LED Digital Clock 
  * 
@@ -199,11 +199,11 @@ void setup() {
   
   // PinMode display digits pins
   DDRD = 0xff;                    // Set all PortD pins to output (0 - 7)
-  PORTD = 0xff;                   // Set all PortD pins to HIGH
+  PORTD = 0x00;                   // Set all PortD pins to LOW
 
   // PinMode display select pins
   DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
-  PORTB = 0x00;                   // Set all PortB pins to LOW
+  PORTB = 0xff;                   // Set all PortB pins to HIGH
 
   /*    *    ATMEGA TIMER2    *    */
   
@@ -713,7 +713,7 @@ void thr_rtc_fix_func(){
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
   // Clean display
-  PORTD = 0xff;                                   // Sets all PORTD pins to HIGH
+  PORTD = 0x00;                                   // Sets all PORTD pins to HIGH
 
   // Brightness control
   if((disp_count/DISP_LENGTH) < ((int) disp_brightness_buffer.getAverage())){
