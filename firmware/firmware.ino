@@ -203,7 +203,7 @@ void setup() {
 
   // PinMode display select pins
   DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
-  PORTB = 0xff;                   // Set all PortB pins to HIGH
+  PORTB = 0x00;                   // Set all PortB pins to LOW
 
   /*    *    ATMEGA TIMER2    *    */
   
@@ -713,7 +713,7 @@ void thr_rtc_fix_func(){
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
   // Clean display
-  PORTD = 0x00;                                   // Sets all PORTD pins to HIGH
+  PORTD = 0x00;                                   // Sets all PORTD pins to LOW
 
   // Brightness control
   if((disp_count/DISP_LENGTH) < ((int) disp_brightness_buffer.getAverage())){
