@@ -199,10 +199,15 @@ void setup() {
   
   // PinMode display digits pins
   DDRD = 0xff;                    // Set all PortD pins to output (0 - 7)
-  PORTD = 0x00;                   // Set all PortD pins to LOW
+  PORTD = 0xff;                   // Set all PortD pins to HIGH
 
   // PinMode display select pins
   DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
+  PORTB = B00111110;              // Set all PortB pins to HIGH
+
+  delay(500);
+
+  PORTD = 0x00;                   // Set all PortD pins to LOW 
   PORTB = 0x00;                   // Set all PortB pins to LOW
 
   /*    *    ATMEGA TIMER2    *    */
@@ -275,21 +280,19 @@ void setup() {
   ir_recv.enableIRIn();
 
   // Wait for RTC begin
-  while(!rtc.begin()){}
+  while(!rtc.begin()){
+    // Blink error for five seconds
+    if(millis()/500 % 3 >= 1){
+      disp_setCursor(0);
+      disp_print((char*)"ERRO");
+    } else {
+      disp_clear();
+    }
+  }
 
   /*    *   CHECK COMPONENTS  *    */
 
   if (!rtc.isrunning()) {
-    // Blink error for five seconds
-    while(millis() < 5000){
-      if(millis()/500 % 3 >= 1){
-        disp_setCursor(0);
-        disp_print((char*)"ERRO");
-      } else {
-        disp_clear();
-      }
-    }
-
     // Reset time
     rtc.adjust(DateTime(__DATE__, __TIME__));
 
@@ -315,8 +318,8 @@ void setup() {
   disp_print((char*)"DAVI");
 
   // DEBUG
-  thr_ldr.enabled = false;
-  disp_brightness_buffer.fill(DISP_BR_MAX);
+  //thr_ldr.enabled = false;
+  //disp_brightness_buffer.fill(DISP_BR_MAX);
 }
 
 void loop() {
@@ -746,7 +749,7 @@ void DispTimer_enable(){
 
 void DispTimer_disable(){
   TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
-  PORTD = 0xff;             // Clean display
+  PORTD = 0x00;             // Clean display
 }
 
 
