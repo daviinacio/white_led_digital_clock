@@ -1,5 +1,5 @@
 /*
- * (c) daviapps 2019
+ * (c) daviapps 2020
  * 
  * White LED Digital Clock 
  * 
@@ -203,6 +203,11 @@ void setup() {
 
   // PinMode display select pins
   DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
+  PORTB = B00111110;              // Set all PortB pins to HIGH
+
+  delay(500);
+
+  PORTD = 0x00;                   // Set all PortD pins to LOW 
   PORTB = 0x00;                   // Set all PortB pins to LOW
 
   /*    *    ATMEGA TIMER2    *    */
@@ -275,21 +280,19 @@ void setup() {
   ir_recv.enableIRIn();
 
   // Wait for RTC begin
-  while(!rtc.begin()){}
+  while(!rtc.begin()){
+    // Blink error for five seconds
+    if(millis()/500 % 3 >= 1){
+      disp_setCursor(0);
+      disp_print((char*)"ERRO");
+    } else {
+      disp_clear();
+    }
+  }
 
   /*    *   CHECK COMPONENTS  *    */
 
   if (!rtc.isrunning()) {
-    // Blink error for five seconds
-    while(millis() < 5000){
-      if(millis()/500 % 3 >= 1){
-        disp_setCursor(0);
-        disp_print((char*)"ERRO");
-      } else {
-        disp_clear();
-      }
-    }
-
     // Reset time
     rtc.adjust(DateTime(__DATE__, __TIME__));
 
@@ -315,8 +318,8 @@ void setup() {
   disp_print((char*)"DAVI");
 
   // DEBUG
-  thr_ldr.enabled = false;
-  disp_brightness_buffer.fill(DISP_BR_MAX);
+  //thr_ldr.enabled = false;
+  //disp_brightness_buffer.fill(DISP_BR_MAX);
 }
 
 void loop() {
@@ -713,7 +716,7 @@ void thr_rtc_fix_func(){
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
   // Clean display
-  PORTD = 0xff;                                   // Sets all PORTD pins to HIGH
+  PORTD = 0x00;                                   // Sets all PORTD pins to LOW
 
   // Brightness control
   if((disp_count/DISP_LENGTH) < ((int) disp_brightness_buffer.getAverage())){
@@ -746,7 +749,7 @@ void DispTimer_enable(){
 
 void DispTimer_disable(){
   TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
-  PORTD = 0xff;             // Clean display
+  PORTD = 0x00;             // Clean display
 }
 
 
