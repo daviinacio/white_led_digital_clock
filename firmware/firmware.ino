@@ -50,7 +50,8 @@
 #define ADJUST_CURSOR_RANGE 5
 
 //#define RTC_FIX_INTERVAL 150000   // 150s or 2.5m
-#define RTC_FIX_INTERVAL 180000   // 180s or 3m
+//#define RTC_FIX_INTERVAL 180000   // 180s or 3m
+#define RTC_FIX_INTERVAL 662712   // 180s or 11m
 #define RTC_FIX_OPERATION --
 
 // Binary data
@@ -166,7 +167,7 @@ decode_results ir_results;
 
 // Main
 int main_current_screen = MAIN_SCREEN_HOME;
-bool main_change_loop = false;
+bool main_change_loop = true;
 
 // Chronometer
 int chronometer_counter = 0;
