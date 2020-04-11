@@ -29,7 +29,7 @@
 
 #define CHRONOMETER_INTERVAL 1000
 
-#define RTC_INTERVAL 20000
+#define RTC_INTERVAL 1000
 
 #define DHT_INIT_VALUE -255
 #define DHT_PIN A0
@@ -371,6 +371,10 @@ void thr_main_func() {
     case MAIN_SCREEN_LDR:
       disp_setCursor(0);
       disp_print((char*)"BR");
+
+      if((int) disp_brightness_buffer.getAverage() < 10)
+        disp_print((char*)" ");
+      
       disp_printEnd((int) disp_brightness_buffer.getAverage());
       break;
 
@@ -413,6 +417,9 @@ void thr_main_func() {
           disp_print((char*)"  ");
         }
         else {
+          if(time_adjust_day % 100 < 10)
+            disp_print((char*)" ");
+            
           disp_printEnd(time_adjust_day);
         }
       }
@@ -425,6 +432,9 @@ void thr_main_func() {
           disp_print((char*)"  ");
         }
         else {
+          if(time_adjust_month % 100 < 10)
+            disp_print((char*)" ");
+            
           disp_printEnd(time_adjust_month);
         }
       }
@@ -437,11 +447,15 @@ void thr_main_func() {
           disp_print((char*)"  ");
         }
         else {
+          if(time_adjust_year % 100 < 10)
+            disp_print((char*)" ");
+            
           disp_printEnd(time_adjust_year % 100);
         }
       }
       break;
 
+    // @deprecated
     case MAIN_SCREEN_REMOTE:
       unsigned long value = ir_results.value;
       disp_scroll("  0x" + String(value, 16) + "  " , 1000);
@@ -617,9 +631,9 @@ void thr_ir_func(){
         main_current_screen = MAIN_SCREEN_CHRONOMETER;
         break; // B
       case 0xB5210DA6:
-        if(main_current_screen != MAIN_SCREEN_REMOTE)
-          disp_scroll("   CONTROLE HEX   ");
-        main_current_screen = MAIN_SCREEN_REMOTE;
+        //if(main_current_screen != MAIN_SCREEN_REMOTE)
+        //  disp_scroll("   CONTROLE HEX   ");
+        //main_current_screen = MAIN_SCREEN_REMOTE;
         break; // C
       case 0x71A1FE88:
         if(main_current_screen != MAIN_SCREEN_TIME_ADJUST)
