@@ -51,7 +51,8 @@
 
 //#define RTC_FIX_INTERVAL 150000   // 150s or 2.5m
 //#define RTC_FIX_INTERVAL 180000   // 180s or 3m
-#define RTC_FIX_INTERVAL 662712   // 180s or 11m
+//#define RTC_FIX_INTERVAL 662712   // 662s or 11m
+#define RTC_FIX_INTERVAL 6627123   // 6627s or 110m or 1.8h
 #define RTC_FIX_OPERATION --
 
 // Binary data
