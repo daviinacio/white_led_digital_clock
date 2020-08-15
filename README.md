@@ -11,6 +11,7 @@ This is a digital led clock made based on arduino uno microcontroller.
 - [arduino-buffer](https://github.com/daviinacio/arduino-buffer)
 - [RTClib](https://github.com/adafruit/RTClib)
 - [Arduino-IRremote](https://github.com/z3t0/Arduino-IRremote)
+- [EEPROMEx](https://github.com/thijse/Arduino-EEPROMEx)
 
 ## Hardware
 - Custom electronic board
@@ -27,7 +28,7 @@ This is a digital led clock made based on arduino uno microcontroller.
 - Changes the display brightness automatically
 - Can be controlled by TV remote control
 - Time adjust
-- RTC Time Fix
+- Adjustable RTC Time Fix
 
 ## Files and Images
 

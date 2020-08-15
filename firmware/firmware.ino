@@ -24,8 +24,8 @@
 #define MAIN_SCREEN_HOME 1000
 #define MAIN_SCREEN_LDR 1001
 #define MAIN_SCREEN_CHRONOMETER 1002
-#define MAIN_SCREEN_REMOTE 1003
-#define MAIN_SCREEN_TIME_ADJUST 1004
+#define MAIN_SCREEN_ADJUST_TIME 1003
+#define MAIN_SCREEN_ADJUST_RTC_FIX 1004
 
 #define CHRONOMETER_INTERVAL 1000
 
@@ -38,7 +38,7 @@
 #define DHT_BUFFER_INTERVAL 60000
 
 #define IR_PIN A1
-#define IR_INTERVAL 250
+#define IR_INTERVAL 200
 
 #define BZ_PIN PB1
 #define BZ_INTERVAL 62
@@ -47,13 +47,11 @@
 
 #define SCROLL_INTERVAL 350
 
-#define ADJUST_CURSOR_RANGE 5
+#define ADJUST_TIME_CURSOR_RANGE 5
+#define ADJUST_RTC_FIX_CURSOR_RANGE 2
 
-//#define RTC_FIX_INTERVAL 150000   // 150s or 2.5m
-//#define RTC_FIX_INTERVAL 180000   // 180s or 3m
-//#define RTC_FIX_INTERVAL 662712   // 662s or 11m
-#define RTC_FIX_INTERVAL 6627123   // 6627s or 110m or 1.8h
-#define RTC_FIX_OPERATION --
+#define RTC_FIX_INTERVAL_EEPROM_ADDRESS 0x05
+#define RTC_FIX_OPERATION_EEPROM_ADDRESS 0x01
 
 // Binary data
 const byte seven_seg_ascii_init = ' '; // First mapped ascci position
@@ -116,6 +114,7 @@ const byte seven_seg_asciis [((int) seven_seg_ascii_end - seven_seg_ascii_init) 
 };
 
 // Library imports
+#include <EEPROMex.h>
 #include <Thread.h>
 #include <ThreadController.h>
 
@@ -181,17 +180,21 @@ String disp_scroll_buffer;
 int disp_scroll_cursor_init = 0;
 bool disp_scroll_dir = false; // true: right | false: left
 
-// Time Adjust
-int time_adjust_cursor = 0;
+// RTC Fix
+int rtc_fix_interval = 1;
+int rtc_fix_operation = 1;
 
+// Adjust
+int adjust_cursor = 0;
+int adjust_cursor_blink = false;
+
+// Time Adjust
 int time_adjust_year = 0;
 int time_adjust_month = 0;
 int time_adjust_day = 0;
 int time_adjust_hour = 0;
 int time_adjust_minute = 0;
 int time_adjust_second = 0;
-
-bool time_adjust_cursor_blink = false;
 
 // DEBUG
 int debug_thread_loop_tester = 0;
@@ -258,7 +261,7 @@ void setup() {
   thr_scroll.setInterval(SCROLL_INTERVAL);
 
   thr_rtc_fix.onRun(thr_rtc_fix_func);
-  thr_rtc_fix.setInterval(RTC_FIX_INTERVAL);
+  thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
 
   //thr_panel.onRun(thread_panel_loop);
   //thr_panel.setInterval(1000);
@@ -299,10 +302,34 @@ void setup() {
     rtc.adjust(DateTime(__DATE__, __TIME__));
 
     // Goto time adjust screen
-    main_current_screen = MAIN_SCREEN_TIME_ADJUST;
-    time_adjust_cursor = 1;
+    main_current_screen = MAIN_SCREEN_ADJUST_TIME;
+    adjust_cursor = 1;
     thr_rtc.enabled = false;
     thr_rtc_fix.enabled = false;
+  }
+
+  /*    *     EEPROM READ     *    */
+  
+  if(EEPROM.isReady()){
+    rtc_fix_operation = EEPROM.readInt(
+      RTC_FIX_OPERATION_EEPROM_ADDRESS
+    );
+    
+    rtc_fix_interval = EEPROM.readInt(
+      RTC_FIX_INTERVAL_EEPROM_ADDRESS
+    );
+
+    if(rtc_fix_interval == 0 && main_current_screen == MAIN_SCREEN_HOME) {
+      // Goto rtc fix adjust screen
+      main_current_screen = MAIN_SCREEN_ADJUST_RTC_FIX;
+      adjust_cursor = 0;
+      thr_rtc.enabled = false;
+      thr_rtc_fix.enabled = false;
+    }
+    else
+    if(rtc_fix_interval >= 1){
+      thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
+    }
   }
 
   /*    *   THREAD FIRST RUN  *    */
@@ -385,13 +412,13 @@ void thr_main_func() {
       disp_printEnd(chronometer_counter);
       break;
 
-    case MAIN_SCREEN_TIME_ADJUST:
+    case MAIN_SCREEN_ADJUST_TIME:
       disp_setCursor(0);
     
-      if(time_adjust_cursor == 0 || time_adjust_cursor == 1){  // Minutes & Hours
+      if(adjust_cursor == 0 || adjust_cursor == 1){  // Minutes & Hours
         disp_setCursor(0);
 
-        if((time_adjust_cursor == 1 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
+        if((adjust_cursor == 1 && millis()/500 % 3 == 0) && adjust_cursor_blink){   // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -400,7 +427,7 @@ void thr_main_func() {
           disp_print(time_adjust_hour);
         }
 
-        if((time_adjust_cursor == 0 && millis()/500 % 3 == 0) && time_adjust_cursor_blink){   // Blink 1/3 on focus
+        if((adjust_cursor == 0 && millis()/500 % 3 == 0) && adjust_cursor_blink){   // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -410,11 +437,11 @@ void thr_main_func() {
         }
       }
       else
-      if(time_adjust_cursor == 2){  // Day
+      if(adjust_cursor == 2){  // Day
         disp_setCursor(0);
         disp_print((char*)"D ");
 
-        if((millis()/500 % 3 == 0) && time_adjust_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/500 % 3 == 0) && adjust_cursor_blink){  // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -425,11 +452,11 @@ void thr_main_func() {
         }
       }
       else
-      if(time_adjust_cursor == 3){  // Month
+      if(adjust_cursor == 3){  // Month
         disp_setCursor(0);
         disp_print((char*)"M ");
 
-        if((millis()/500 % 3 == 0) && time_adjust_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/500 % 3 == 0) && adjust_cursor_blink){  // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -440,11 +467,11 @@ void thr_main_func() {
         }
       }
       else
-      if(time_adjust_cursor == 4){  // Year
+      if(adjust_cursor == 4){  // Year
         disp_setCursor(0);
         disp_print((char*)"Y ");
 
-        if((millis()/500 % 3 == 0) && time_adjust_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/500 % 3 == 0) && adjust_cursor_blink){  // Blink 1/3 on focus
           disp_print((char*)"  ");
         }
         else {
@@ -456,10 +483,29 @@ void thr_main_func() {
       }
       break;
 
-    // @deprecated
-    case MAIN_SCREEN_REMOTE:
-      unsigned long value = ir_results.value;
-      disp_scroll("  0x" + String(value, 16) + "  " , 1000);
+    case MAIN_SCREEN_ADJUST_RTC_FIX:
+      if(adjust_cursor == 0){  // Interval
+        disp_setCursor(0);
+        
+        if((millis()/500 % 3 == 0) && adjust_cursor_blink){  // Blink 1/3 on focus
+          disp_clear();
+        }
+        else {
+          disp_printEnd(rtc_fix_interval);
+        }
+      }
+      else
+      if(adjust_cursor == 1){ // Opetarion
+        disp_setCursor(0);
+        disp_print((char*)"OP ");
+        
+        if((millis()/500 % 3 == 0) && adjust_cursor_blink){  // Blink 1/3 on focus
+          disp_print((char*)" ");
+        }
+        else {
+          disp_printEnd(rtc_fix_operation);
+        }
+      }
       break;
 
     default:
@@ -518,20 +564,28 @@ void thr_ir_func(){
 
     // Temporary variable
     int tp;
+    
+    adjust_cursor_blink = false;
 
     switch(value){
       case 0xC26BF044: // Up
         if(main_current_screen == MAIN_SCREEN_HOME)
           buzzer_status = BZ_STATUS_OLDCLOCK;
         else
-        if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
-          time_adjust_cursor_blink = false;
-          switch(time_adjust_cursor){
+        if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+          switch(adjust_cursor){
             case 0: if(time_adjust_minute < 59) time_adjust_minute++; break;
             case 1: if(time_adjust_hour < 23) time_adjust_hour++; break;
             case 2: if(time_adjust_day < 31) time_adjust_day++; break;
             case 3: if(time_adjust_month < 12) time_adjust_month++; break;
             case 4: if(time_adjust_year < 2100) time_adjust_year++; break;
+          }
+        }
+        else
+        if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX){
+          switch(adjust_cursor){
+            case 0: if(rtc_fix_interval < 9999) rtc_fix_interval++; break;
+            case 1: if(rtc_fix_operation < 2) rtc_fix_operation++; break;
           }
         }
         break;
@@ -540,9 +594,8 @@ void thr_ir_func(){
         if(main_current_screen == MAIN_SCREEN_HOME)
           dht_temp_buffer.fill(-42);
         else
-        if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
-          time_adjust_cursor_blink = false;
-          switch(time_adjust_cursor){
+        if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+          switch(adjust_cursor){
             case 0: if(time_adjust_minute > 0) time_adjust_minute--; break;
             case 1: if(time_adjust_hour > 0) time_adjust_hour--; break;
             case 2: if(time_adjust_day > 0) time_adjust_day--; break;
@@ -550,21 +603,36 @@ void thr_ir_func(){
             case 4: if(time_adjust_year > 2000) time_adjust_year--; break;
           }
         }
+        else
+        if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX){
+          switch(adjust_cursor){
+            case 0: if(rtc_fix_interval > 1) rtc_fix_interval--; break;
+            case 1: if(rtc_fix_operation > 0) rtc_fix_operation--; break;
+          }
+        }
         break; 
 
       case 0x758C9D82: // Left
-        if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
-          time_adjust_cursor_blink = false;
-          if(time_adjust_cursor < ADJUST_CURSOR_RANGE - 1)
-            time_adjust_cursor++;
+        if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+          if(adjust_cursor < ADJUST_TIME_CURSOR_RANGE - 1)
+            adjust_cursor++;
+        }
+        else
+        if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX){
+          if(adjust_cursor < ADJUST_RTC_FIX_CURSOR_RANGE - 1)
+            adjust_cursor++;
         }
         break;
 
       case 0x53801EE8: // Right
-        if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
-          time_adjust_cursor_blink = false;
-          if(time_adjust_cursor > 0)
-            time_adjust_cursor--;
+        if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+          if(adjust_cursor > 0)
+            adjust_cursor--;
+        }
+        else
+        if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX){
+          if(adjust_cursor > 0)
+            adjust_cursor--;
         }
         break;
 
@@ -575,11 +643,20 @@ void thr_ir_func(){
       
       case 0x3BCD58C8: // Return
       case 0x974F362:  // Exit
-        if(main_current_screen == MAIN_SCREEN_TIME_ADJUST){
+        if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
           rtc.adjust(DateTime(
             time_adjust_year, time_adjust_month, time_adjust_day,
             time_adjust_hour, time_adjust_minute, 1
           ));
+          disp_scroll("SAVE", 1500);
+        }
+        else
+        if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX){
+          EEPROM.writeInt(RTC_FIX_INTERVAL_EEPROM_ADDRESS, rtc_fix_interval);
+          EEPROM.writeInt(RTC_FIX_OPERATION_EEPROM_ADDRESS, rtc_fix_operation);
+
+          thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
+          
           disp_scroll("SAVE", 1500);
         }
 
@@ -632,12 +709,18 @@ void thr_ir_func(){
         main_current_screen = MAIN_SCREEN_CHRONOMETER;
         break; // B
       case 0xB5210DA6:
-        //if(main_current_screen != MAIN_SCREEN_REMOTE)
-        //  disp_scroll("   CONTROLE HEX   ");
-        //main_current_screen = MAIN_SCREEN_REMOTE;
+        if(main_current_screen != MAIN_SCREEN_ADJUST_RTC_FIX){
+          disp_scroll("   RTC FIX   ");
+          
+          thr_rtc.enabled = false;
+          thr_rtc_fix.enabled = false;
+          adjust_cursor_blink = true;
+          main_current_screen = MAIN_SCREEN_ADJUST_RTC_FIX;
+          adjust_cursor = 0;
+        }
         break; // C
       case 0x71A1FE88:
-        if(main_current_screen != MAIN_SCREEN_TIME_ADJUST)
+        if(main_current_screen != MAIN_SCREEN_ADJUST_TIME)
           disp_scroll("   SET TIME   ");
 
         if (rtc.isrunning()) {
@@ -651,9 +734,9 @@ void thr_ir_func(){
         
         thr_rtc.enabled = false;
         thr_rtc_fix.enabled = false;
-        time_adjust_cursor_blink = true;
-        main_current_screen = MAIN_SCREEN_TIME_ADJUST;
-        time_adjust_cursor = 1;
+        adjust_cursor_blink = true;
+        main_current_screen = MAIN_SCREEN_ADJUST_TIME;
+        adjust_cursor = 1;
         break; // D
   
       case 0x6A618E02:
@@ -673,7 +756,7 @@ void thr_ir_func(){
     }
   }
   else
-    time_adjust_cursor_blink = true;
+    adjust_cursor_blink = true;
 }
 
 void thr_buzzer_func(){
@@ -692,8 +775,6 @@ void thr_buzzer_func(){
 }
 
 void thr_scroll_func(){
-  //if(disp_scroll_dir ? (disp_scroll_cursor_init))
-
   disp_clear();
   disp_setCursor(0);
   disp_print(disp_scroll_buffer.substring(disp_scroll_cursor_init, disp_scroll_cursor_init + DISP_LENGTH).c_str());
@@ -708,6 +789,11 @@ void thr_scroll_func(){
 }
 
 void thr_rtc_fix_func(){
+  if(rtc_fix_operation == 0){
+    thr_rtc_fix.enabled = false;
+    return;
+  }
+  
   // Read current time
   rtc_now = rtc.now();
 
@@ -719,8 +805,11 @@ void thr_rtc_fix_func(){
   time_adjust_minute = rtc_now.minute();
   time_adjust_second = rtc_now.second();
 
-  // Back one second
-  time_adjust_second -= 1;
+  // Fix one second
+  time_adjust_second += (
+    rtc_fix_operation == 2 ?
+      2 : -1
+  );
 
   // Adjust the time
   rtc.adjust(DateTime(
@@ -740,7 +829,7 @@ ISR(TIMER2_COMPA_vect){
     PORTB ^= 0b00111100;                          // Toggle pins PB2, PB3, PB4, PB5 to LOW
   
     // Active the current digit of display
-    PORTB ^= (1 << DISP_PIN_FIRST + disp_digit);   // Toggle the current digit pin to HIGH
+    PORTB ^= (1 << DISP_PIN_FIRST + disp_digit);  // Toggle the current digit pin to HIGH
   
     // Set display content
     PORTD ^= disp_content[disp_digit];            // Sets the display content and uses ^= to invert the bits
