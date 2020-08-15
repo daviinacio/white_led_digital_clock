@@ -4,13 +4,14 @@ This is a digital led clock made based on arduino uno microcontroller.
 
 |   |   |
 |:-:|:-:|
-|![](/hardware/photos/20190101_195619.jpg)|![](/hardware/photos/20190101_195603.jpg)|
+|![](https://raw.githubusercontent.com/daviinacio/white_led_digital_clock/gh-pages/photos/20190101_195619.jpg)|![](https://raw.githubusercontent.com/daviinacio/white_led_digital_clock/gh-pages/photos/20190101_195603.jpg)|
 
 ## Dependencies
 - [Arduino Thread](https://github.com/ivanseidel/ArduinoThread)
 - [arduino-buffer](https://github.com/daviinacio/arduino-buffer)
 - [RTClib](https://github.com/adafruit/RTClib)
 - [Arduino-IRremote](https://github.com/z3t0/Arduino-IRremote)
+- [EEPROMEx](https://github.com/thijse/Arduino-EEPROMEx)
 
 ## Hardware
 - Custom electronic board
@@ -27,6 +28,7 @@ This is a digital led clock made based on arduino uno microcontroller.
 - Changes the display brightness automatically
 - Can be controlled by TV remote control
 - Time adjust
+- Adjustable RTC Time Fix
 
 ## Files and Images
 
@@ -48,7 +50,7 @@ This is a digital led clock made based on arduino uno microcontroller.
 
 |   |   |   |
 |:-:|:-:|:-:|
-|![](/hardware/photos/20190105_220150-1.jpg)|![](/hardware/photos/20190111_230230-1.jpg)|![](/hardware/photos/20190112_202421_Burst01-1.jpg)|
+|![](https://raw.githubusercontent.com/daviinacio/white_led_digital_clock/gh-pages/photos/20190105_220150-1.jpg)|![](https://raw.githubusercontent.com/daviinacio/white_led_digital_clock/gh-pages/photos/20190111_230230-1.jpg)|![](https://raw.githubusercontent.com/daviinacio/white_led_digital_clock/gh-pages/photos/20190112_202421_Burst01-1.jpg)|
 
 
 
