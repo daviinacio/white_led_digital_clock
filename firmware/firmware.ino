@@ -9,6 +9,8 @@
  * 
  */
 
+bool debug = false;
+
 #define LDR_PIN A2
 
 #define DISP_BR_MAX 64
@@ -33,7 +35,7 @@
 
 #define DHT_INIT_VALUE -255
 #define DHT_PIN A0
-#define DHT_TYPE DHT::DHT11
+#define DHT_TYPE DHT11
 #define DHT_BUFFER_LENGTH 4
 #define DHT_BUFFER_INTERVAL 60000
 
@@ -105,8 +107,8 @@ const byte seven_seg_asciis [((int) seven_seg_ascii_end - seven_seg_ascii_init) 
   0b00001010,   // R
   0b10110110,   // S
   0b01100010,   // T
-  0b00111000,   // U
-  0b01111100,   // V
+  0b01111100,   // U
+  0b00111000,   // V
   0b01010100,   // W
   0b10010010,   // X
   0b01110110,   // Y
@@ -123,7 +125,8 @@ const byte seven_seg_asciis [((int) seven_seg_ascii_end - seven_seg_ascii_init) 
 
 #include "DHT.h"
 
-#include <IRremote.h>
+//#include <IRremote.h>
+#include <IRremote.hpp>
 
 #include <Buffer.h>
 
@@ -143,6 +146,8 @@ Thread thr_rtc_fix = Thread();
 
 // Display
 byte disp_content [DISP_LENGTH];
+int disp_decimal_position = 0;
+bool disp_time_marker = false;
 
 Buffer disp_brightness_buffer(DISP_BR_BUFFER_LENGTH, DISP_BR_MAX);
 
@@ -156,14 +161,10 @@ RTC_DS1307 rtc;
 DateTime rtc_now;
 
 // DHT
-DHT dht;
+DHT dht(DHT_PIN, DHT_TYPE);
 
 Buffer dht_temp_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE);
 Buffer dht_hum_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE);
-
-// IR Remore
-IRrecv ir_recv(IR_PIN);
-decode_results ir_results;
 
 // Main
 int main_current_screen = MAIN_SCREEN_HOME;
@@ -195,9 +196,6 @@ int time_adjust_day = 0;
 int time_adjust_hour = 0;
 int time_adjust_minute = 0;
 int time_adjust_second = 0;
-
-// DEBUG
-int debug_thread_loop_tester = 0;
 
 void setup() {
   /*    *    *    PIN MODE   *    *    */
@@ -281,8 +279,13 @@ void setup() {
   /*    *  LIBRARY BEGINNERS  *    */
 
   Wire.begin();
-  dht.setup(DHT_PIN, DHT_TYPE);
-  ir_recv.enableIRIn();
+  dht.begin();
+  IrReceiver.begin(IR_PIN);
+  //ir_recv.enableIRIn();
+  if(debug){
+    Serial.begin(9600);
+    Serial.println("Debug mode initialized");
+  }
 
   // Wait for RTC begin
   while(!rtc.begin()){
@@ -359,6 +362,14 @@ void loop() {
 /*    *    *    *    THREAD    *    *    *    */
 
 void thr_main_func() {
+  if(debug){
+    // PinMode display digits pins
+    PORTD = 0b00000010;                   // Set all PortD pins to HIGH
+    PORTB = 0b00111110;              // Set all PortB pins to HIGH
+    return;
+  }
+
+  disp_time_marker = false;
   long m = millis();
   
   switch(main_current_screen){
@@ -384,6 +395,8 @@ void thr_main_func() {
       
       // Hours and Minutes
       else {                          // Runs when others 'IFs' are false
+        disp_time_marker = true;
+        //disp_time_marker = m / 1000 % 2 == 0;
         disp_setCursor(0);
         
         if(rtc_now.hour() < 10)
@@ -539,12 +552,12 @@ void thr_rtc_func(){
 void thr_dht_func(){
   // Disable display timer while dht read
   DispTimer_disable();
-  float dht_temp_read = dht.getTemperature();
-  float dht_hum_read = dht.getHumidity();
+  float dht_temp_read = dht.readTemperature();
+  float dht_hum_read = dht.readHumidity();
   DispTimer_enable();
 
   // Ignore read errors
-  if(dht.getStatus() != DHT::ERROR_NONE) return;
+  //if(dht.getStatus() != DHT::ERROR_NONE) return;
 
   // Avoid first read problems
   if(dht_temp_buffer.empty()) dht_temp_buffer.fill((int) dht_temp_read);
@@ -552,15 +565,26 @@ void thr_dht_func(){
 
   if(dht_hum_buffer.empty())  dht_hum_buffer.fill((int) dht_hum_read);
   else                        dht_hum_buffer.insert((int) dht_hum_read);
+
+  if(debug){
+    Serial.print("DHT sensor: T ");
+    Serial.print((int) dht_temp_read);
+    Serial.print(", H ");
+    Serial.println((int) dht_hum_read);
+  }
 }
 
 void thr_ir_func(){
-  //for (int read_try = 0; ir_recv.decode(&ir_results) and read_try < IR_TRYOUT; read_try++) {
-  if(ir_recv.decode(&ir_results)){
+  if(IrReceiver.decode()){
     // Read the ir HEX value
-    unsigned long value = ir_results.value;
+    unsigned long value = IrReceiver.decodedIRData.decodedRawData;
     // Receive the next value
-    ir_recv.resume();
+    IrReceiver.resume();
+
+    if(debug){
+      Serial.print("IR sensor received: 0x");
+      Serial.println(value, HEX);
+    }
 
     // Temporary variable
     int tp;
@@ -568,7 +592,7 @@ void thr_ir_func(){
     adjust_cursor_blink = false;
 
     switch(value){
-      case 0xC26BF044: // Up
+      case 0x9F600707: // Up
         if(main_current_screen == MAIN_SCREEN_HOME)
           buzzer_status = BZ_STATUS_OLDCLOCK;
         else
@@ -590,7 +614,7 @@ void thr_ir_func(){
         }
         break;
 
-      case 0xC4FFB646: // Down
+      case 0x9E610707: // Down
         if(main_current_screen == MAIN_SCREEN_HOME)
           dht_temp_buffer.fill(-42);
         else
@@ -612,7 +636,7 @@ void thr_ir_func(){
         }
         break; 
 
-      case 0x758C9D82: // Left
+      case 0x9A650707: // Left
         if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
           if(adjust_cursor < ADJUST_TIME_CURSOR_RANGE - 1)
             adjust_cursor++;
@@ -624,7 +648,7 @@ void thr_ir_func(){
         }
         break;
 
-      case 0x53801EE8: // Right
+      case 0x9D620707: // Right
         if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
           if(adjust_cursor > 0)
             adjust_cursor--;
@@ -636,13 +660,16 @@ void thr_ir_func(){
         }
         break;
 
-      case 0x8AF13528:  // Center
+      case 0x97680707:  // Center
         if(main_current_screen == MAIN_SCREEN_HOME)
-          buzzer_status = BZ_STATUS_OFF; 
+          buzzer_status = BZ_STATUS_OFF;
+        else if(main_current_screen == MAIN_SCREEN_CHRONOMETER)
+          thr_chronometer.enabled = !thr_chronometer.enabled;
+          
         break;
       
-      case 0x3BCD58C8: // Return
-      case 0x974F362:  // Exit
+      case 0xE51A0707: // Return
+      case 0x0:  // Exit
         if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
           rtc.adjust(DateTime(
             time_adjust_year, time_adjust_month, time_adjust_day,
@@ -665,7 +692,7 @@ void thr_ir_func(){
         thr_rtc_fix.enabled = true;
         break;
       
-      case 0x68733A46:  //disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; 
+      case 0xF8070707:  //disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; 
         thr_ldr.enabled = false;
         
         tp = disp_brightness_buffer.getAverage();
@@ -677,7 +704,7 @@ void thr_ir_func(){
         disp_brightness_buffer.fill(tp);
         break; // Vol+
         
-      case 0x83B19366:  //disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false;
+      case 0xF40B0707:  //disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false;
         thr_ldr.enabled = false;
         
         tp = disp_brightness_buffer.getAverage();
@@ -687,28 +714,28 @@ void thr_ir_func(){
         disp_brightness_buffer.fill(tp);
         break; // Vol-
         
-      case 0x2340B922:
+      case 0xF00F0707:
         if(!thr_ldr.enabled)
           disp_scroll("AUTO", 1500);
         thr_ldr.enabled = true; break;
         // Mute
 
-      case 0XCE3693E6:  disp_scroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
-      case 0x6BDD79E6:  disp_scroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250); break; // Content
+      case 0xFE010707:  disp_scroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
+      case 0xC13E0707:  disp_scroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250); break; // Content
   
-      case 0xDAEA83EC:
+      case 0xFB040707:
         if(main_current_screen != MAIN_SCREEN_LDR)
           disp_scroll("   BRILHO   ");
           
         main_current_screen = MAIN_SCREEN_LDR;
-      break; // A
+      break; // 1
       
-      case 0x2BAFCEEC:
+      case 0xFA050707:
         if(main_current_screen != MAIN_SCREEN_CHRONOMETER)
           disp_scroll("   CRONOMETRO   ");
         main_current_screen = MAIN_SCREEN_CHRONOMETER;
-        break; // B
-      case 0xB5210DA6:
+        break; // 2
+      case 0xF9060707:
         if(main_current_screen != MAIN_SCREEN_ADJUST_RTC_FIX){
           disp_scroll("   RTC FIX   ");
           
@@ -718,8 +745,8 @@ void thr_ir_func(){
           main_current_screen = MAIN_SCREEN_ADJUST_RTC_FIX;
           adjust_cursor = 0;
         }
-        break; // C
-      case 0x71A1FE88:
+        break; // 3
+      case 0xF7080707:
         if(main_current_screen != MAIN_SCREEN_ADJUST_TIME)
           disp_scroll("   SET TIME   ");
 
@@ -737,17 +764,9 @@ void thr_ir_func(){
         adjust_cursor_blink = true;
         main_current_screen = MAIN_SCREEN_ADJUST_TIME;
         adjust_cursor = 1;
-        break; // D
+        break; // 4
   
-      case 0x6A618E02:
-        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) thr_chronometer.enabled = true;
-        break; // Play
-        
-      case 0xE0F44528:
-        if(main_current_screen == MAIN_SCREEN_CHRONOMETER) thr_chronometer.enabled = false;
-        break; // Pause
-        
-      case 0xC863D6C8:
+      case 0xEC130707:
         if(main_current_screen == MAIN_SCREEN_CHRONOMETER) {
           thr_chronometer.enabled = false;
           chronometer_counter = 0;
@@ -820,6 +839,9 @@ void thr_rtc_fix_func(){
 
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
+  if(debug)
+    return;
+
   // Clean display
   PORTD = 0x00;                                   // Sets all PORTD pins to LOW
 
@@ -834,6 +856,15 @@ ISR(TIMER2_COMPA_vect){
     // Set display content
     PORTD ^= disp_content[disp_digit];            // Sets the display content and uses ^= to invert the bits
                                                   // (the display actives with LOW state)
+
+    // Set time marker
+    if(disp_time_marker && disp_digit == DISP_LENGTH -1)
+      PORTD ^= (1 << 0);
+
+    // Set decimal position
+    if(disp_decimal_position == disp_digit + 1 && disp_decimal_position <= 3) {
+      PORTD ^= (1 << 0);
+    }
   }
 
   // Increment the current digit register
@@ -849,10 +880,12 @@ ISR(TIMER2_COMPA_vect){
 // 13/09/2019 -> Friday | Programmer day
 
 void DispTimer_enable(){
+  if(debug) return;
   TIMSK2 |= (1 << OCIE2A); // enable timer compare interrupt
 }
 
 void DispTimer_disable(){
+  if(debug) return;
   TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
   PORTD = 0x00;             // Clean display
 }
@@ -913,5 +946,6 @@ void disp_scroll(String content, int interval){
 }
 
 void disp_scroll(String content){
+  disp_time_marker = false;
   disp_scroll(content, SCROLL_INTERVAL);
 }

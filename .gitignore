@@ -4,3 +4,4 @@
 *.exe
 *.hex
 *.tmp
+.DS_Store
