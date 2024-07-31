@@ -47,6 +47,20 @@ bool debug = false;
 #define BZ_STATUS_OFF 1100
 #define BZ_STATUS_OLDCLOCK 1101
 
+#define PANEL_PIN A3
+#define PANEL_INTERVAL 50
+#define PANEL_DEFAULT 0
+#define PANEL_BTN_HOME 1
+#define PANEL_RANGE_BTN_HOME (value < 50)
+#define PANEL_BTN_VALUE_UP 2
+#define PANEL_RANGE_BTN_VALUE_UP (value >= 750 && value < 900)
+#define PANEL_BTN_VALUE_DOWN 3
+#define PANEL_RANGE_BTN_VALUE_DOWN (value >= 550 && value < 750)
+#define PANEL_BTN_FUNC_LEFT 4
+#define PANEL_RANGE_BTN_FUNC_LEFT (value >= 350 && value < 550)
+#define PANEL_BTN_FUNC_RIGHT 5
+#define PANEL_RANGE_BTN_FUNC_RIGHT (value >= 100 && value < 300)
+
 #define SCROLL_INTERVAL 350
 
 #define ADJUST_TIME_CURSOR_RANGE 5
@@ -130,6 +144,8 @@ const byte seven_seg_asciis [((int) seven_seg_ascii_end - seven_seg_ascii_init) 
 
 #include <Buffer.h>
 
+// #include "display.hpp"
+
 // Threads
 ThreadController cpu = ThreadController();
 Thread thr_main = Thread();
@@ -142,7 +158,7 @@ Thread thr_ir = Thread();
 Thread thr_buzzer = Thread();
 Thread thr_scroll = Thread();
 Thread thr_rtc_fix = Thread();
-//Thread thr_panel = Thread();
+Thread thr_panel = Thread();
 
 // Display
 byte disp_content [DISP_LENGTH];
@@ -185,6 +201,10 @@ bool disp_scroll_dir = false; // true: right | false: left
 int rtc_fix_interval = 1;
 int rtc_fix_operation = 1;
 
+// Panel
+long panel_milliseconds_pressing = 0;
+int panel_btn_pressing = PANEL_DEFAULT;
+
 // Adjust
 int adjust_cursor = 0;
 int adjust_cursor_blink = false;
@@ -215,20 +235,22 @@ void setup() {
 
   /*    *    ATMEGA TIMER2    *    */
   
-  // Turn on CTC mode
-  TCCR2A = 0x00;
-  TCCR2A |= (1 << WGM21);
+  if(!debug){
+    // Turn on CTC mode
+    TCCR2A = 0x00;
+    TCCR2A |= (1 << WGM21);
 
-  // Set CS21 bit for 8 prescaler
-  TCCR2B = 0x00;
-  TCCR2B |= (1 << CS21);
+    // Set CS21 bit for 8 prescaler
+    TCCR2B = 0x00;
+    TCCR2B |= (1 << CS21);
 
-  // Initialize Registers
-  TCNT2  = 0;
-  OCR2A = 100;
-  
-  // Enable to TIMER2 Interrupt
-  TIMSK2 |= (1 << OCIE2A);
+    // Initialize Registers
+    TCNT2  = 0;
+    OCR2A = 100;
+    
+    // Enable to TIMER2 Interrupt
+    TIMSK2 |= (1 << OCIE2A);
+  }
 
   /*    *    *  THREADS  *    *    */
 
@@ -261,8 +283,8 @@ void setup() {
   thr_rtc_fix.onRun(thr_rtc_fix_func);
   thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
 
-  //thr_panel.onRun(thread_panel_loop);
-  //thr_panel.setInterval(1000);
+  thr_panel.onRun(thr_panel_func);
+  thr_panel.setInterval(PANEL_INTERVAL);
 
 
   // Add thread to thead controll
@@ -275,6 +297,11 @@ void setup() {
   cpu.add(&thr_buzzer);
   cpu.add(&thr_scroll);
   cpu.add(&thr_rtc_fix);
+  cpu.add(&thr_panel);
+
+  //if(debug)
+    thr_dht.enabled = false;
+  
   
   /*    *  LIBRARY BEGINNERS  *    */
 
@@ -284,6 +311,7 @@ void setup() {
   //ir_recv.enableIRIn();
   if(debug){
     Serial.begin(9600);
+    delay(50);
     Serial.println("Debug mode initialized");
   }
 
@@ -345,9 +373,11 @@ void setup() {
 
   thr_scroll.enabled = false;
 
-  disp_clear();
-  disp_setCursor(0);
-  disp_print((char*)"DAVI");
+  if(!debug){
+    disp_clear();
+    disp_setCursor(0);
+    disp_print((char*)"DAVI");
+  }
 
   // DEBUG
   //thr_ldr.enabled = false;
@@ -365,7 +395,7 @@ void thr_main_func() {
   if(debug){
     // PinMode display digits pins
     PORTD = 0b00000010;                   // Set all PortD pins to HIGH
-    PORTB = 0b00111110;              // Set all PortB pins to HIGH
+    PORTB = 0b00111100;              // Set all PortB pins to HIGH
     return;
   }
 
@@ -837,6 +867,44 @@ void thr_rtc_fix_func(){
   ));
 }
 
+void thr_panel_func(){
+  // Detect Button
+  int button = PANEL_DEFAULT;
+  int value = analogRead(PANEL_PIN);
+
+  if(PANEL_RANGE_BTN_HOME) button = PANEL_BTN_HOME;
+  else if(PANEL_RANGE_BTN_VALUE_UP) button = PANEL_BTN_VALUE_UP;
+  else if(PANEL_RANGE_BTN_VALUE_DOWN) button = PANEL_BTN_VALUE_DOWN;
+  else if(PANEL_RANGE_BTN_FUNC_LEFT) button = PANEL_BTN_FUNC_LEFT;
+  else if(PANEL_RANGE_BTN_FUNC_RIGHT) button = PANEL_BTN_FUNC_RIGHT;
+
+  if(panel_btn_pressing == button && button != PANEL_DEFAULT){
+    panel_milliseconds_pressing += PANEL_INTERVAL;
+  }
+  else {
+    panel_btn_pressing = button;
+    panel_milliseconds_pressing = 0;
+  }
+
+  if(button == PANEL_DEFAULT) return;
+
+  if(debug){
+    Serial.print("Analog: ");
+    Serial.print(value);
+    Serial.print(" | Button: ");
+    switch(button){
+      case PANEL_BTN_HOME: Serial.print("'home'"); break;
+      case PANEL_BTN_VALUE_UP: Serial.print("'value up'"); break;
+      case PANEL_BTN_VALUE_DOWN: Serial.print("'value down'"); break;
+      case PANEL_BTN_FUNC_LEFT: Serial.print("'func left'"); break;
+      case PANEL_BTN_FUNC_RIGHT: Serial.print("'func right'"); break;
+    }
+    Serial.print(" | Time pressing: ");
+    Serial.print(panel_milliseconds_pressing / 1000);
+    Serial.println("s");
+  }
+}
+
 /*    *    *    *    TIMER2    *    *    *    */
 ISR(TIMER2_COMPA_vect){
   if(debug)
@@ -937,6 +1005,7 @@ void disp_printEnd(int num){
 
 // Scroll
 void disp_scroll(String content, int interval){
+  disp_time_marker = false;
   disp_scroll_cursor_init = 0;
   disp_scroll_buffer = content;
   //disp_scroll_dir = true;
@@ -946,6 +1015,5 @@ void disp_scroll(String content, int interval){
 }
 
 void disp_scroll(String content){
-  disp_time_marker = false;
   disp_scroll(content, SCROLL_INTERVAL);
 }
