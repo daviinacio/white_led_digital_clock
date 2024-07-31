@@ -48,18 +48,7 @@ bool debug = false;
 #define BZ_STATUS_OLDCLOCK 1101
 
 #define PANEL_PIN A3
-#define PANEL_INTERVAL 50
-#define PANEL_DEFAULT 0
-#define PANEL_BTN_HOME 1
-#define PANEL_RANGE_BTN_HOME (value < 50)
-#define PANEL_BTN_VALUE_UP 2
-#define PANEL_RANGE_BTN_VALUE_UP (value >= 750 && value < 900)
-#define PANEL_BTN_VALUE_DOWN 3
-#define PANEL_RANGE_BTN_VALUE_DOWN (value >= 550 && value < 750)
-#define PANEL_BTN_FUNC_LEFT 4
-#define PANEL_RANGE_BTN_FUNC_LEFT (value >= 350 && value < 550)
-#define PANEL_BTN_FUNC_RIGHT 5
-#define PANEL_RANGE_BTN_FUNC_RIGHT (value >= 100 && value < 300)
+#define PANEL_INTERVAL 200
 
 #define SCROLL_INTERVAL 350
 
@@ -145,6 +134,10 @@ const byte seven_seg_asciis [((int) seven_seg_ascii_end - seven_seg_ascii_init) 
 #include <Buffer.h>
 
 // #include "display.hpp"
+#include "panel.hpp"
+
+// Modules
+AnalogPanel panel = AnalogPanel(PANEL_PIN, PANEL_INTERVAL);
 
 // Threads
 ThreadController cpu = ThreadController();
@@ -158,7 +151,6 @@ Thread thr_ir = Thread();
 Thread thr_buzzer = Thread();
 Thread thr_scroll = Thread();
 Thread thr_rtc_fix = Thread();
-Thread thr_panel = Thread();
 
 // Display
 byte disp_content [DISP_LENGTH];
@@ -201,10 +193,6 @@ bool disp_scroll_dir = false; // true: right | false: left
 int rtc_fix_interval = 1;
 int rtc_fix_operation = 1;
 
-// Panel
-long panel_milliseconds_pressing = 0;
-int panel_btn_pressing = PANEL_DEFAULT;
-
 // Adjust
 int adjust_cursor = 0;
 int adjust_cursor_blink = false;
@@ -228,7 +216,7 @@ void setup() {
   DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
   PORTB = B00111110;              // Set all PortB pins to HIGH
 
-  delay(500);
+  delay(200);
 
   PORTD = 0x00;                   // Set all PortD pins to LOW 
   PORTB = 0x00;                   // Set all PortB pins to LOW
@@ -253,6 +241,11 @@ void setup() {
   }
 
   /*    *    *  THREADS  *    *    */
+
+  // Initialize modules
+  panel.onKeyDown(panel_onKeyDown);
+  panel.onKeyPress(panel_onKeyPress);
+  panel.onKeyUp(panel_onKeyUp);
 
   // Initialize threads
   thr_main.onRun(thr_main_func);
@@ -283,24 +276,21 @@ void setup() {
   thr_rtc_fix.onRun(thr_rtc_fix_func);
   thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
 
-  thr_panel.onRun(thr_panel_func);
-  thr_panel.setInterval(PANEL_INTERVAL);
-
 
   // Add thread to thead controll
   cpu.add(&thr_main);
   cpu.add(&thr_chronometer);
   cpu.add(&thr_ldr);
   cpu.add(&thr_rtc);
-  cpu.add(&thr_dht);
+  //cpu.add(&thr_dht);
   cpu.add(&thr_ir);
   cpu.add(&thr_buzzer);
   cpu.add(&thr_scroll);
   cpu.add(&thr_rtc_fix);
-  cpu.add(&thr_panel);
+  cpu.add(&panel);
 
   //if(debug)
-    thr_dht.enabled = false;
+    //thr_dht.enabled = false;
   
   
   /*    *  LIBRARY BEGINNERS  *    */
@@ -367,11 +357,13 @@ void setup() {
   
   thr_ldr_func();
   thr_rtc_func();
-  thr_dht_func();
+  //thr_dht_func();
 
   /*    *     END OF BOOT     *    */
 
   thr_scroll.enabled = false;
+
+  DispTimer_enable();
 
   if(!debug){
     disp_clear();
@@ -387,6 +379,27 @@ void setup() {
 void loop() {
   // Run the main thread controller
   cpu.run();
+}
+
+/*    *    *    *    MODULES   *    *    *    */
+void panel_onKeyDown(AnalogPanelButton button){
+  if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
+    if(button == AnalogPanelButton::BTN_VALUE_UP)
+      disp_brightness_up();
+    else if(button == AnalogPanelButton::BTN_VALUE_DOWN)
+      disp_brightness_down();
+  }
+}
+
+void panel_onKeyPress(AnalogPanelButton button, long milliseconds){
+  if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
+    if((button == AnalogPanelButton::BTN_VALUE_UP || button == AnalogPanelButton::BTN_VALUE_DOWN) && milliseconds > 1000)
+      disp_brightness_auto();
+  }
+}
+
+void panel_onKeyUp(AnalogPanelButton button, long milliseconds){
+  
 }
 
 /*    *    *    *    THREAD    *    *    *    */
@@ -723,31 +736,16 @@ void thr_ir_func(){
         break;
       
       case 0xF8070707:  //disp_brightness += DISP_BR_MAX/8; thr_ldr.enabled = false; 
-        thr_ldr.enabled = false;
-        
-        tp = disp_brightness_buffer.getAverage();
-        tp += DISP_BR_MAX/8;
-
-        if(tp % 2 != 0) tp -= 1;
-        if(tp > DISP_BR_MAX) tp = DISP_BR_MAX;
-
-        disp_brightness_buffer.fill(tp);
+        disp_brightness_up();
         break; // Vol+
         
       case 0xF40B0707:  //disp_brightness -= DISP_BR_MAX/8; thr_ldr.enabled = false;
-        thr_ldr.enabled = false;
-        
-        tp = disp_brightness_buffer.getAverage();
-        tp -= DISP_BR_MAX/8;
-        if(tp < DISP_BR_MIN) tp = DISP_BR_MIN;
-
-        disp_brightness_buffer.fill(tp);
+        disp_brightness_down();
         break; // Vol-
         
       case 0xF00F0707:
-        if(!thr_ldr.enabled)
-          disp_scroll("AUTO", 1500);
-        thr_ldr.enabled = true; break;
+        disp_brightness_auto();
+        break;
         // Mute
 
       case 0xFE010707:  disp_scroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
@@ -867,41 +865,13 @@ void thr_rtc_fix_func(){
   ));
 }
 
-void thr_panel_func(){
-  // Detect Button
-  int button = PANEL_DEFAULT;
-  int value = analogRead(PANEL_PIN);
-
-  if(PANEL_RANGE_BTN_HOME) button = PANEL_BTN_HOME;
-  else if(PANEL_RANGE_BTN_VALUE_UP) button = PANEL_BTN_VALUE_UP;
-  else if(PANEL_RANGE_BTN_VALUE_DOWN) button = PANEL_BTN_VALUE_DOWN;
-  else if(PANEL_RANGE_BTN_FUNC_LEFT) button = PANEL_BTN_FUNC_LEFT;
-  else if(PANEL_RANGE_BTN_FUNC_RIGHT) button = PANEL_BTN_FUNC_RIGHT;
-
-  if(panel_btn_pressing == button && button != PANEL_DEFAULT){
-    panel_milliseconds_pressing += PANEL_INTERVAL;
-  }
-  else {
-    panel_btn_pressing = button;
-    panel_milliseconds_pressing = 0;
-  }
-
-  if(button == PANEL_DEFAULT) return;
-
-  if(debug){
-    Serial.print("Analog: ");
-    Serial.print(value);
-    Serial.print(" | Button: ");
-    switch(button){
-      case PANEL_BTN_HOME: Serial.print("'home'"); break;
-      case PANEL_BTN_VALUE_UP: Serial.print("'value up'"); break;
-      case PANEL_BTN_VALUE_DOWN: Serial.print("'value down'"); break;
-      case PANEL_BTN_FUNC_LEFT: Serial.print("'func left'"); break;
-      case PANEL_BTN_FUNC_RIGHT: Serial.print("'func right'"); break;
-    }
-    Serial.print(" | Time pressing: ");
-    Serial.print(panel_milliseconds_pressing / 1000);
-    Serial.println("s");
+void debug_print_button_name(int button){
+  switch(button){
+    case AnalogPanelButton::BTN_HOME: Serial.print("'home'"); break;
+    case AnalogPanelButton::BTN_VALUE_UP: Serial.print("'value up'"); break;
+    case AnalogPanelButton::BTN_VALUE_DOWN: Serial.print("'value down'"); break;
+    case AnalogPanelButton::BTN_FUNC_LEFT: Serial.print("'func left'"); break;
+    case AnalogPanelButton::BTN_FUNC_RIGHT: Serial.print("'func right'"); break;
   }
 }
 
@@ -958,6 +928,36 @@ void DispTimer_disable(){
   PORTD = 0x00;             // Clean display
 }
 
+// Display brightness
+void disp_brightness_up(){
+  int tp;
+  thr_ldr.enabled = false;
+  
+  tp = disp_brightness_buffer.getAverage();
+  tp += DISP_BR_MAX/8;
+
+  if(tp % 2 != 0) tp -= 1;
+  if(tp > DISP_BR_MAX) tp = DISP_BR_MAX;
+
+  disp_brightness_buffer.fill(tp);
+}
+  
+void disp_brightness_down(){
+  int tp;
+  thr_ldr.enabled = false;
+  
+  tp = disp_brightness_buffer.getAverage();
+  tp -= DISP_BR_MAX/8;
+  if(tp < DISP_BR_MIN) tp = DISP_BR_MIN;
+
+  disp_brightness_buffer.fill(tp);
+}
+
+void disp_brightness_auto(){
+  if(!thr_ldr.enabled)
+    disp_scroll("AUTO", 1500);
+    thr_ldr.enabled = true;
+}
 
 // Display print
 void disp_setCursor(int col){
