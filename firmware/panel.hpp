@@ -22,26 +22,26 @@ enum AnalogPanelButton {
 class AnalogPanel : public Thread {
 protected:
   int pin;
-  long pressing_miliseconds = 0;
+  unsigned long pressing_miliseconds = 0;
   AnalogPanelButton last_button_pressed = AnalogPanelButton::BTN_DEFAULT;
   AnalogPanelButton readPanel();
   void handleEvents(AnalogPanelButton button);
   void (*_onKeyDown)(AnalogPanelButton button);
-  void (*_onKeyPress)(AnalogPanelButton button, long milliseconds);
-  void (*_onKeyUp)(AnalogPanelButton button, long milliseconds);
+  void (*_onKeyPress)(AnalogPanelButton button, unsigned long milliseconds);
+  void (*_onKeyUp)(AnalogPanelButton button, unsigned long milliseconds);
 
 public:
   AnalogPanel(int _pin);
-  AnalogPanel(int _pin, long _interval);
+  AnalogPanel(int _pin, unsigned long _interval);
   void run();
   bool shouldRun(unsigned long time);
   void onKeyDown(void (*callback)(AnalogPanelButton button));
-  void onKeyPress(void (*callback)(AnalogPanelButton button, long milliseconds));
-  void onKeyUp(void (*callback)(AnalogPanelButton button, long milliseconds));
+  void onKeyPress(void (*callback)(AnalogPanelButton button, unsigned long milliseconds));
+  void onKeyUp(void (*callback)(AnalogPanelButton button, unsigned long milliseconds));
 };
 
 // Implementation
-AnalogPanel::AnalogPanel(int _pin, long _interval){
+AnalogPanel::AnalogPanel(int _pin, unsigned long _interval){
   pin = _pin;
   enabled = false;
   interval = _interval;
@@ -57,11 +57,11 @@ void AnalogPanel::onKeyDown(void (*callback)(AnalogPanelButton)){
   _onKeyDown = callback;
 }
 
-void AnalogPanel::onKeyPress(void (*callback)(AnalogPanelButton, long)){
+void AnalogPanel::onKeyPress(void (*callback)(AnalogPanelButton, unsigned long)){
   _onKeyPress = callback;
 }
 
-void AnalogPanel::onKeyUp(void (*callback)(AnalogPanelButton, long)){
+void AnalogPanel::onKeyUp(void (*callback)(AnalogPanelButton, unsigned long)){
   _onKeyUp = callback;
 }
 
