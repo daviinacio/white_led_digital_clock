@@ -50,8 +50,6 @@ bool debug = false;
 #define RTC_FIX_INTERVAL_EEPROM_ADDRESS 0x05
 #define RTC_FIX_OPERATION_EEPROM_ADDRESS 0x01
 
-
-
 // Library imports
 #include <EEPROMex.h>
 #include <Thread.h>
@@ -88,11 +86,6 @@ Thread thr_rtc_fix = Thread();
 
 
 Buffer disp_brightness_buffer(DISP_BR_BUFFER_LENGTH, DISP_BR_MAX);
-
-int disp_count = 0; 
-int disp_digit = 0;
-
-int disp_content_cursor = 0;
 
 // RTC
 RTC_DS1307 rtc;
@@ -301,7 +294,22 @@ void panel_onKeyPress(AnalogPanelButton button, long milliseconds){
 }
 
 void panel_onKeyUp(AnalogPanelButton button, long milliseconds){
-  
+  if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds < 1000) {
+    Display.enabled = false;
+    Display.printScroll("   BRILHO   ");
+  }
+  else if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds >= 1000 && milliseconds < 2000) {
+    Display.enabled = false;
+    Display.printScrollReverse("   CRONOMETRO   ");
+  }
+  else if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds >= 2000 && milliseconds < 3000) {
+    Display.enabled = false;
+    Display.printScroll("   TESTE DE SCROLL   ");
+  }
+  else if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds >= 3000 && milliseconds < 4000) {
+    Display.enabled = false;
+    Display.printScroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250);
+  }
 }
 
 /*    *    *    *    THREAD    *    *    *    */
@@ -620,7 +628,7 @@ void thr_ir_func(){
             time_adjust_year, time_adjust_month, time_adjust_day,
             time_adjust_hour, time_adjust_minute, 1
           ));
-          // Display.printScroll("SAVE", 1500);
+          Display.printScroll("SAVE", 1500);
         }
         else
         if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX){
@@ -629,7 +637,7 @@ void thr_ir_func(){
 
           thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
           
-          // Display.printScroll("SAVE", 1500);
+          Display.printScroll("SAVE", 1500);
         }
 
         main_current_screen = MAIN_SCREEN_HOME;
@@ -650,24 +658,24 @@ void thr_ir_func(){
         break;
         // Mute
 
-      // case 0xFE010707:  Display.printScroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
-      // case 0xC13E0707:  Display.printScroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250); break; // Content
+      case 0xFE010707:  Display.printScroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
+      case 0xC13E0707:  Display.printScroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250); break; // Content
   
       case 0xFB040707:
         if(main_current_screen != MAIN_SCREEN_LDR)
-          // Display.printScroll("   BRILHO   ");
+          Display.printScroll("   BRILHO   ");
           
         main_current_screen = MAIN_SCREEN_LDR;
       break; // 1
       
       case 0xFA050707:
         if(main_current_screen != MAIN_SCREEN_CHRONOMETER)
-          // Display.printScroll("   CRONOMETRO   ");
+          Display.printScroll("   CRONOMETRO   ");
         main_current_screen = MAIN_SCREEN_CHRONOMETER;
         break; // 2
       case 0xF9060707:
         if(main_current_screen != MAIN_SCREEN_ADJUST_RTC_FIX){
-          // Display.printScroll("   RTC FIX   ");
+          Display.printScroll("   RTC FIX   ");
           
           thr_rtc.enabled = false;
           thr_rtc_fix.enabled = false;
@@ -678,7 +686,7 @@ void thr_ir_func(){
         break; // 3
       case 0xF7080707:
         if(main_current_screen != MAIN_SCREEN_ADJUST_TIME)
-          // Display.printScroll("   SET TIME   ");
+          Display.printScroll("   SET TIME   ");
 
         if (rtc.isrunning()) {
           rtc_now = rtc.now();
@@ -805,7 +813,7 @@ void disp_brightness_down(){
 
 void disp_brightness_auto(){
   if(!thr_ldr.enabled){
-    Display.print("AUTO");
+    Display.printScroll("AUTO", 1500);
   }
   thr_ldr.enabled = true; 
 }

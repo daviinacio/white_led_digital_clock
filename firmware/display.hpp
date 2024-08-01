@@ -8,7 +8,7 @@
 #define DISP_PIN_LAST PB5
 #define DISP_BR_MIN 1
 #define DISP_BR_MAX 64
-#define DISP_SCROLL_INTERVAL 350
+#define DISP_SCROLL_INTERVAL 200
 
 // Binary data
 const byte seven_seg_ascii_init = ' '; // First mapped ASCII position
@@ -82,7 +82,7 @@ protected:
   int decimal_position = 0;
   int cursor = 0;
 
-  String scroll_content;
+  const char* scroll_content;
   int scroll_cursor = 0;
   bool scroll_forward = false;
 
@@ -110,10 +110,10 @@ public:
   void printEnd(double decimal);
   void printEnd(double decimal, int fractionDigits);
   void printEnd(String text);
-  void printScroll(String text);
-  void printScroll(String text, int _interval);
-  void printScrollReverse(String text);
-  void printScrollReverse(String text, int _interval);
+  void printScroll(const char* text);
+  void printScroll(const char* text, int _interval);
+  void printScrollReverse(const char* text);
+  void printScrollReverse(const char* text, int _interval);
 
   void run();
   
@@ -122,44 +122,68 @@ public:
 };
 
 DisplayDriver::DisplayDriver(){
+  time_separator = false;
+  scroll_cursor = 0;
+  scroll_content = "";
+  scroll_forward = true;
   enabled = false;
+  setInterval(DISP_SCROLL_INTERVAL);
 }
 
 // Run sub-threads
 void DisplayDriver::run(){
-  clear();
+  for(int i = 0; i < DISP_LENGTH; i++)
+    content[i] = 0x00;
   cursor = 0;
 
-  // int startIndex = scroll_cursor - DISP_LENGTH;
-  //const char* slice = scroll_content.substring(startIndex >= 0 ? startIndex : 0, scroll_cursor).c_str();
-  const char* slice = scroll_content.substring(scroll_cursor, scroll_cursor + DISP_LENGTH).c_str();
-  scroll_cursor++;
+  int scroll_content_length = String(scroll_content).length();
 
-  for(int i = 0; i < strlen(slice) && cursor < DISP_LENGTH; i++){
-    char c = toupper(slice[i]);
-    content[cursor] = seven_seg_asciis[((int) c) - seven_seg_ascii_init];
-    cursor++;
+
+  if(scroll_cursor > (scroll_content_length - DISP_LENGTH)){
+  // if(scroll_cursor > 8){
+    enabled = false;
+    scroll_cursor++;
+    scroll_content = "";
+    return;
   }
 
-  // Disable scroll and back to the main
-  if(scroll_cursor > (scroll_content.length() - DISP_LENGTH + 1)){
-    enabled = false;
+  String slice;
+
+  if(scroll_forward){
+    slice = String(scroll_content).substring(
+      scroll_cursor,
+      scroll_cursor + DISP_LENGTH
+    );
+  }
+  else {
+    slice = String(scroll_content).substring(
+      scroll_content_length - scroll_cursor - DISP_LENGTH,
+      scroll_content_length - scroll_cursor
+    );
+  }
+
+  const char* slice_str = slice.c_str();
+
+  scroll_cursor++;
+
+  for(int i = 0; i < strlen(slice_str) && cursor < DISP_LENGTH; i++){
+    char c = toupper(slice_str[i]);
+    content[cursor] = seven_seg_asciis[((int) c) - seven_seg_ascii_init];
+    cursor++;
   }
 
   Thread::run();
 }
 
-// bool DisplayDriver::shouldRun(unsigned long time){
-//   return Thread::shouldRun(time);
-// }
-
 
 // Print methods
 void DisplayDriver::setCursor(int col){
+  if(enabled) return;
   cursor = col % DISP_LENGTH;
 }
 
 void DisplayDriver::clear(){
+  if(enabled) return;
   for(int i = 0; i < DISP_LENGTH; i++)
     content[i] = 0x00;
 }
@@ -247,33 +271,31 @@ void DisplayDriver::printEnd(String text){
   printEnd(text.c_str());
 }
 
-void DisplayDriver::printScroll(String text, int _interval){
+void DisplayDriver::printScroll(const char* text, int _interval){
+  if(enabled) return;
   time_separator = false;
   scroll_cursor = 0;
   scroll_content = text;
   scroll_forward = true;
   enabled = true;
   setInterval(_interval);
-
-  Serial.println("printScroll");
 }
 
-void DisplayDriver::printScroll(String text){
+void DisplayDriver::printScroll(const char* text){
   printScroll(text, DISP_SCROLL_INTERVAL);
 }
 
-void DisplayDriver::printScrollReverse(String text, int _interval){
+void DisplayDriver::printScrollReverse(const char* text, int _interval){
+  if(enabled) return;
   time_separator = false;
   scroll_cursor = 0;
   scroll_content = text;
   scroll_forward = false;
   enabled = true;
   setInterval(_interval);
-
-  Serial.println("printScrollReverse");
 }
 
-void DisplayDriver::printScrollReverse(String text){
+void DisplayDriver::printScrollReverse(const char* text){
   printScrollReverse(text, DISP_SCROLL_INTERVAL);
 }
 
@@ -288,6 +310,7 @@ void DisplayDriver::setBrightness(int _brightness){
 }
 
 void DisplayDriver::setTimeSeparator(bool _time_separator){
+  if(enabled) return;
   time_separator = _time_separator;
 }
 
