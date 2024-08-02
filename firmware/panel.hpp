@@ -21,9 +21,9 @@ enum AnalogPanelButton {
 
 class AnalogPanel : public Thread {
 protected:
-  int pin;
+  unsigned int pin;
   unsigned long pressing_miliseconds = 0;
-  AnalogPanelButton last_button_pressed = AnalogPanelButton::BTN_DEFAULT;
+  AnalogPanelButton last_button_pressed = BTN_DEFAULT;
   AnalogPanelButton readPanel();
   void handleEvents(AnalogPanelButton button);
   void (*_onKeyDown)(AnalogPanelButton button);
@@ -31,8 +31,8 @@ protected:
   void (*_onKeyUp)(AnalogPanelButton button, unsigned long milliseconds);
 
 public:
-  AnalogPanel(int _pin);
-  AnalogPanel(int _pin, unsigned long _interval);
+  AnalogPanel(unsigned int _pin);
+  AnalogPanel(unsigned int _pin, unsigned long _interval);
   void run();
   bool shouldRun(unsigned long time);
   void onKeyDown(void (*callback)(AnalogPanelButton button));
@@ -41,16 +41,14 @@ public:
 };
 
 // Implementation
-AnalogPanel::AnalogPanel(int _pin, unsigned long _interval){
+AnalogPanel::AnalogPanel(unsigned int _pin, unsigned long _interval){
   pin = _pin;
   enabled = false;
   interval = _interval;
 }
 
-AnalogPanel::AnalogPanel(int _pin){
-  pin = _pin;
-  enabled = false;
-  interval = PANEL_DEFAULT_INTERVAL;
+AnalogPanel::AnalogPanel(unsigned int _pin){
+  AnalogPanel(_pin, PANEL_DEFAULT_INTERVAL);
 }
 
 void AnalogPanel::onKeyDown(void (*callback)(AnalogPanelButton)){
@@ -66,14 +64,14 @@ void AnalogPanel::onKeyUp(void (*callback)(AnalogPanelButton, unsigned long)){
 }
 
 AnalogPanelButton AnalogPanel::readPanel(){
-  AnalogPanelButton button = AnalogPanelButton::BTN_DEFAULT;
+  AnalogPanelButton button = BTN_DEFAULT;
   int value = analogRead(pin);
 
-  if(RANGE_BTN_HOME) button = AnalogPanelButton::BTN_HOME;
-  else if(RANGE_BTN_VALUE_UP) button = AnalogPanelButton::BTN_VALUE_UP;
-  else if(RANGE_BTN_VALUE_DOWN) button = AnalogPanelButton::BTN_VALUE_DOWN;
-  else if(RANGE_BTN_FUNC_LEFT) button = AnalogPanelButton::BTN_FUNC_LEFT;
-  else if(RANGE_BTN_FUNC_RIGHT) button = AnalogPanelButton::BTN_FUNC_RIGHT;
+  if(RANGE_BTN_HOME) button = BTN_HOME;
+  else if(RANGE_BTN_VALUE_UP) button = BTN_VALUE_UP;
+  else if(RANGE_BTN_VALUE_DOWN) button = BTN_VALUE_DOWN;
+  else if(RANGE_BTN_FUNC_LEFT) button = BTN_FUNC_LEFT;
+  else if(RANGE_BTN_FUNC_RIGHT) button = BTN_FUNC_RIGHT;
   
   return button;
 }
@@ -81,7 +79,7 @@ AnalogPanelButton AnalogPanel::readPanel(){
 bool AnalogPanel::shouldRun(unsigned long time){
   AnalogPanelButton button = readPanel();
 
-  if(button != AnalogPanelButton::BTN_DEFAULT){
+  if(button != BTN_DEFAULT){
     if(!enabled){
       handleEvents(button);
     }
@@ -101,7 +99,7 @@ void AnalogPanel::run() {
 
 void AnalogPanel::handleEvents(AnalogPanelButton button){
   // Kew Up
-  if(button == AnalogPanelButton::BTN_DEFAULT) {
+  if(button == BTN_DEFAULT) {
     if(_onKeyUp != NULL)
 		  _onKeyUp(last_button_pressed, pressing_miliseconds);
     pressing_miliseconds = 0;
@@ -113,7 +111,7 @@ void AnalogPanel::handleEvents(AnalogPanelButton button){
 		  _onKeyPress(button, pressing_miliseconds);
   }
   // Key Down
-  else if(last_button_pressed == AnalogPanelButton::BTN_DEFAULT){
+  else if(last_button_pressed == BTN_DEFAULT){
     if(_onKeyDown != NULL)
 		  _onKeyDown(button);
   }
@@ -129,7 +127,7 @@ void AnalogPanel::handleEvents(AnalogPanelButton button){
 
   last_button_pressed = button;
 
-  if(button == AnalogPanelButton::BTN_DEFAULT){
+  if(button == BTN_DEFAULT){
     enabled = false;
   }
   else {

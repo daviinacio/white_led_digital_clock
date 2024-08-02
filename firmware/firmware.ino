@@ -12,6 +12,11 @@
 bool debug = false;
 
 #define LDR_PIN A2
+#define LDR_MIN 0
+#define LDR_MAX 650
+
+#define DISP_BR_MIN 1
+#define DISP_BR_MAX 64
 
 #define DISP_BR_BUFFER_LENGTH 16
 #define DISP_BR_BUFFER_INTERVAL 2000
@@ -23,7 +28,10 @@ bool debug = false;
 #define MAIN_SCREEN_ADJUST_TIME 1003
 #define MAIN_SCREEN_ADJUST_RTC_FIX 1004
 
-#define CHRONOMETER_INTERVAL 1000
+#define MAIN_SCREEN_FIRST MAIN_SCREEN_LDR
+#define MAIN_SCREEN_LAST MAIN_SCREEN_ADJUST_RTC_FIX
+
+#define CHRONOMETER_INTERVAL 100
 
 #define RTC_INTERVAL 1000
 
@@ -60,16 +68,18 @@ bool debug = false;
 
 #include "DHT.h"
 
-//#include <IRremote.h>
 #include <IRremote.hpp>
 
 #include <Buffer.h>
 
+// Import Modules
 #include "display.hpp"
 #include "panel.hpp"
+#include "light-sensor.hpp"
 
 // Modules
 AnalogPanel panel = AnalogPanel(PANEL_PIN, PANEL_INTERVAL);
+LightSensor ldr = LightSensor(LDR_PIN);
 
 // Threads
 ThreadController cpu = ThreadController();
@@ -81,9 +91,7 @@ Thread thr_rtc = Thread();
 Thread thr_dht = Thread();
 Thread thr_ir = Thread();
 Thread thr_buzzer = Thread();
-// Thread thr_scroll = Thread();
 Thread thr_rtc_fix = Thread();
-
 
 Buffer disp_brightness_buffer(DISP_BR_BUFFER_LENGTH, DISP_BR_MAX);
 
@@ -106,11 +114,6 @@ int chronometer_counter = 0;
 
 // Buzzer
 int buzzer_status = BZ_STATUS_OFF;
-
-// Scroll
-String disp_scroll_buffer;
-int disp_scroll_cursor_init = 0;
-bool disp_scroll_dir = false; // true: right | false: left
 
 // RTC Fix
 int rtc_fix_interval = 1;
@@ -136,6 +139,8 @@ void setup() {
   panel.onKeyPress(panel_onKeyPress);
   panel.onKeyUp(panel_onKeyUp);
 
+  // ldr.onRun(Display.run());
+
   // Initialize threads
   thr_main.onRun(thr_main_func);
   thr_main.setInterval(MAIN_INTERVAL);
@@ -159,26 +164,27 @@ void setup() {
   thr_buzzer.onRun(thr_buzzer_func);
   thr_buzzer.setInterval(BZ_INTERVAL);
 
-  // thr_scroll.onRun(thr_scroll_func);
-  // thr_scroll.setInterval(SCROLL_INTERVAL);
-
   thr_rtc_fix.onRun(thr_rtc_fix_func);
   thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
 
-  // Add thread to thead controll
+  // Add thread to thread controller
   cpu.add(&thr_main);
   cpu.add(&thr_chronometer);
-  cpu.add(&thr_ldr);
   cpu.add(&thr_rtc);
+  cpu.add(&thr_ldr);
   cpu.add(&thr_dht);
   cpu.add(&thr_ir);
   cpu.add(&thr_buzzer);
   cpu.add(&thr_rtc_fix);
+
+  // Add modules to thread controller
   cpu.add(&panel);
   cpu.add(&Display);
+  // cpu.add(&ldr);
+
 
   //if(debug)
-    thr_dht.enabled = false;
+    // thr_dht.enabled = false;
   
   /*    *  LIBRARY BEGINNERS  *    */
   Wire.begin();
@@ -255,8 +261,6 @@ void setup() {
     Display.enable();
   }
 
-  // thr_scroll.enabled = false;
-
   if(!debug){
     Display.clear();
     Display.setCursor(0);
@@ -279,36 +283,59 @@ void loop() {
 /*    *    *    *    MODULES   *    *    *    */
 void panel_onKeyDown(AnalogPanelButton button){
   if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
-    if(button == AnalogPanelButton::BTN_VALUE_UP)
+    if(button == BTN_VALUE_UP)
       disp_brightness_up();
-    else if(button == AnalogPanelButton::BTN_VALUE_DOWN)
+    else if(button == BTN_VALUE_DOWN)
       disp_brightness_down();
+  }
+  else if(main_current_screen == MAIN_SCREEN_CHRONOMETER){
+    if(button == BTN_VALUE_UP)
+      thr_chronometer.enabled = !thr_chronometer.enabled;
+    else if(button == BTN_VALUE_DOWN){
+      if(thr_chronometer.enabled)
+        thr_chronometer.enabled = false;
+      else
+        chronometer_counter = 0;
+    }
   }
 }
 
 void panel_onKeyPress(AnalogPanelButton button, long milliseconds){
   if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
-    if((button == AnalogPanelButton::BTN_VALUE_UP || button == AnalogPanelButton::BTN_VALUE_DOWN) && milliseconds > 1000)
+    if((button == BTN_VALUE_UP || button == BTN_VALUE_DOWN) && milliseconds > 1000)
       disp_brightness_auto();
   }
 }
 
 void panel_onKeyUp(AnalogPanelButton button, long milliseconds){
-  if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds < 1000) {
-    Display.enabled = false;
-    Display.printScroll("   BRILHO   ");
+  int time = milliseconds / 250;
+
+  if(button == BTN_FUNC_LEFT){
+    main_current_screen--;
+    if(main_current_screen < MAIN_SCREEN_FIRST)
+      main_current_screen = MAIN_SCREEN_LAST;
+    print_current_screen_name();
   }
-  else if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds >= 1000 && milliseconds < 2000) {
-    Display.enabled = false;
-    Display.printScrollReverse("   CRONOMETRO   ");
+  else if(button == BTN_FUNC_RIGHT){
+    main_current_screen++;
+    if(main_current_screen > MAIN_SCREEN_LAST)
+      main_current_screen = MAIN_SCREEN_FIRST;
+    print_current_screen_name();
   }
-  else if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds >= 2000 && milliseconds < 3000) {
-    Display.enabled = false;
-    Display.printScroll("   TESTE DE SCROLL   ");
+  else if(button == BTN_HOME){
+    if(time < 2) {
+      main_current_screen = MAIN_SCREEN_HOME;
+      Display.clearScroll();
+    }
   }
-  else if(button == AnalogPanelButton::BTN_FUNC_LEFT && milliseconds >= 3000 && milliseconds < 4000) {
-    Display.enabled = false;
-    Display.printScroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250);
+}
+
+void print_current_screen_name(){
+  switch(main_current_screen){
+    case MAIN_SCREEN_LDR: Display.printScroll("    BRILHO    ", 150); break;
+    case MAIN_SCREEN_CHRONOMETER: Display.printScroll("    CRONOMETRO    ", 150); break;
+    case MAIN_SCREEN_ADJUST_RTC_FIX: Display.printScroll("    RTC FIX    ", 150); break;
+    case MAIN_SCREEN_ADJUST_TIME: Display.printScroll("    SET TIME    ", 150); break;
   }
 }
 
@@ -336,14 +363,15 @@ void thr_main_func() {
       if(m / 2000 % 10 == 8 && dht_temp_buffer.getAverage() != DHT_INIT_VALUE && main_change_loop){
         Display.setCursor(0);
         Display.print((int) dht_temp_buffer.getAverage());
-        Display.print("*C");
+        Display.printEnd("*C");
       } else
       
       // Humidity                     // Each 20s, runs on 18s, per 2s
       if(m / 2000 % 10 == 9 && dht_hum_buffer.getAverage() != DHT_INIT_VALUE && main_change_loop){
+        Display.clear();
         Display.setCursor(0);
-        Display.print("H ");
-        Display.printEnd((int) dht_hum_buffer.getAverage());
+        Display.print("H");
+        Display.printEnd(dht_hum_buffer.getAverage());
       }
       
       // Hours and Minutes
@@ -365,16 +393,38 @@ void thr_main_func() {
       Display.setCursor(0);
       Display.print("BR");
 
-      if((int) disp_brightness_buffer.getAverage() < 10)
+      if(Display.getBrightness() < 10)
         Display.print(" ");
-      
-      Display.printEnd((int) disp_brightness_buffer.getAverage());
+      Display.printEnd(Display.getBrightness());
       break;
 
     case MAIN_SCREEN_CHRONOMETER:
       thr_main.setInterval(CHRONOMETER_INTERVAL);
       Display.clear();
-      Display.printEnd(chronometer_counter);
+
+      if(chronometer_counter < 600){
+        Display.printEnd(chronometer_counter * 0.1, 1);
+      }
+      else if(chronometer_counter < 36000) {
+        Display.setCursor(0);
+        unsigned short minute = (chronometer_counter / 10) / 60;
+        unsigned short seconds = (chronometer_counter / 10) % 60;
+
+        if(minute < 10)
+          Display.print(0);
+        Display.print(minute);
+
+        if(seconds < 10)
+          Display.print(0);
+        Display.print(seconds);
+        
+        Display.setTimeSeparator((millis() / 500 % 2 == 1) || !thr_chronometer.enabled);
+      }
+      else {
+        thr_chronometer.enabled = false;
+        chronometer_counter = 0;
+      }
+
       break;
 
     case MAIN_SCREEN_ADJUST_TIME:
@@ -488,7 +538,7 @@ void thr_chronometer_func(){
 
 void thr_ldr_func(){
   // Make the ldr sensor read
-  int br_read = map(analogRead(LDR_PIN), 0, 650, DISP_BR_MIN, DISP_BR_MAX);
+  int br_read = map(analogRead(LDR_PIN), LDR_MIN, LDR_MAX, DISP_BR_MIN, DISP_BR_MAX);
 
   // Avoid out of range problems
   if(br_read > DISP_BR_MAX) br_read = DISP_BR_MAX; else
@@ -504,13 +554,13 @@ void thr_rtc_func(){
 
 void thr_dht_func(){
   // Disable display timer while dht read
-  Display.disable();
+  if(!debug) Display.disable();
   float dht_temp_read = dht.readTemperature();
   float dht_hum_read = dht.readHumidity();
-  Display.enable();
+  if(!debug) Display.enable();
 
   // Ignore read errors
-  //if(dht.getStatus() != DHT::ERROR_NONE) return;
+  if(isnan(dht_temp_read) || isnan(dht_hum_read)) return;
 
   // Avoid first read problems
   if(dht_temp_buffer.empty()) dht_temp_buffer.fill((int) dht_temp_read);
@@ -526,7 +576,7 @@ void thr_dht_func(){
     Serial.println((int) dht_hum_read);
   }
 }
-
+  
 void thr_ir_func(){
   if(IrReceiver.decode()){
     // Read the ir HEX value
@@ -622,7 +672,7 @@ void thr_ir_func(){
         break;
       
       case 0xE51A0707: // Return
-      case 0x0:  // Exit
+      // case 0x0:  // Exit
         if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
           rtc.adjust(DateTime(
             time_adjust_year, time_adjust_month, time_adjust_day,
@@ -658,36 +708,30 @@ void thr_ir_func(){
         break;
         // Mute
 
-      case 0xFE010707:  Display.printScroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
-      case 0xC13E0707:  Display.printScroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250); break; // Content
+      // case 0xFE010707:  Display.printScroll("   DESENVOLVIDO POR DAVI INACIO    ", 300); break; // Content
+      // case 0xC13E0707:  Display.printScroll("    - FELIZ DIA DO PROGRAMADOR -    ", 250); break; // Content
   
       case 0xFB040707:
-        if(main_current_screen != MAIN_SCREEN_LDR)
-          Display.printScroll("   BRILHO   ");
-          
         main_current_screen = MAIN_SCREEN_LDR;
+        print_current_screen_name();
       break; // 1
       
       case 0xFA050707:
-        if(main_current_screen != MAIN_SCREEN_CHRONOMETER)
-          Display.printScroll("   CRONOMETRO   ");
         main_current_screen = MAIN_SCREEN_CHRONOMETER;
+        print_current_screen_name();
         break; // 2
       case 0xF9060707:
         if(main_current_screen != MAIN_SCREEN_ADJUST_RTC_FIX){
-          Display.printScroll("   RTC FIX   ");
-          
           thr_rtc.enabled = false;
           thr_rtc_fix.enabled = false;
           adjust_cursor_blink = true;
           main_current_screen = MAIN_SCREEN_ADJUST_RTC_FIX;
           adjust_cursor = 0;
+
+          print_current_screen_name();
         }
         break; // 3
       case 0xF7080707:
-        if(main_current_screen != MAIN_SCREEN_ADJUST_TIME)
-          Display.printScroll("   SET TIME   ");
-
         if (rtc.isrunning()) {
           rtc_now = rtc.now();
           time_adjust_year = rtc_now.year();
@@ -702,6 +746,8 @@ void thr_ir_func(){
         adjust_cursor_blink = true;
         main_current_screen = MAIN_SCREEN_ADJUST_TIME;
         adjust_cursor = 1;
+
+        print_current_screen_name();
         break; // 4
   
       case 0xEC130707:
@@ -730,20 +776,6 @@ void thr_buzzer_func(){
       break;
   }
 }
-
-// void thr_scroll_func(){
-//   Display.clear();
-//   Display.setCursor(0);
-//   Display.print(disp_scroll_buffer.substring(disp_scroll_cursor_init, disp_scroll_cursor_init + DISP_LENGTH).c_str());
-
-//   disp_scroll_cursor_init++;
-
-//   // Disable scroll and back to the main
-//   if(disp_scroll_cursor_init > (disp_scroll_buffer.length() - DISP_LENGTH + 1)){
-//     thr_scroll.enabled = false;
-//     thr_main.enabled = true;
-//   }
-// }
 
 void thr_rtc_fix_func(){
   if(rtc_fix_operation == 0){
@@ -778,42 +810,28 @@ void thr_rtc_fix_func(){
 
 void debug_print_button_name(int button){
   switch(button){
-    case AnalogPanelButton::BTN_HOME: Serial.print("'home'"); break;
-    case AnalogPanelButton::BTN_VALUE_UP: Serial.print("'value up'"); break;
-    case AnalogPanelButton::BTN_VALUE_DOWN: Serial.print("'value down'"); break;
-    case AnalogPanelButton::BTN_FUNC_LEFT: Serial.print("'func left'"); break;
-    case AnalogPanelButton::BTN_FUNC_RIGHT: Serial.print("'func right'"); break;
+    case BTN_HOME: Serial.print("'home'"); break;
+    case BTN_VALUE_UP: Serial.print("'value up'"); break;
+    case BTN_VALUE_DOWN: Serial.print("'value down'"); break;
+    case BTN_FUNC_LEFT: Serial.print("'func left'"); break;
+    case BTN_FUNC_RIGHT: Serial.print("'func right'"); break;
   }
 }
 
 void disp_brightness_up(){
-  int tp = 0;
+  Display.incrementBrightness();
   thr_ldr.enabled = false;
-  tp = disp_brightness_buffer.getAverage();
-  tp += DISP_BR_MAX/8;
-
-  if(tp % 2 != 0) tp -= 1;
-  if(tp > DISP_BR_MAX) tp = DISP_BR_MAX;
-
-  disp_brightness_buffer.fill(tp);
-  Display.setBrightness(tp);
+  disp_brightness_buffer.fill(Display.getBrightness());
 }
 
 void disp_brightness_down(){
-  int tp = 0;
+  Display.decrementBrightness();
   thr_ldr.enabled = false;
-    
-  tp = disp_brightness_buffer.getAverage();
-  tp -= DISP_BR_MAX/8;
-  if(tp < DISP_BR_MIN) tp = DISP_BR_MIN;
-
-  disp_brightness_buffer.fill(tp);
-  Display.setBrightness(tp);
+  disp_brightness_buffer.fill(Display.getBrightness());
 }
 
 void disp_brightness_auto(){
-  if(!thr_ldr.enabled){
+  if(!thr_ldr.enabled)
     Display.printScroll("AUTO", 1500);
-  }
   thr_ldr.enabled = true; 
 }
