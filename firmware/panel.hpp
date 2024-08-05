@@ -11,24 +11,24 @@
 #define RANGE_BTN_FUNC_RIGHT  (value >= 190 && value < 400)   // ~205
 
 enum AnalogPanelButton {
-  BTN_DEFAULT = 0,
-  BTN_HOME = 1,
-  BTN_VALUE_UP = 2,
-  BTN_VALUE_DOWN = 3,
-  BTN_FUNC_LEFT = 4,
-  BTN_FUNC_RIGHT = 5,
+  BTN_DEFAULT = 0x00,
+  BTN_HOME = 0x01,
+  BTN_VALUE_UP = 0x02,
+  BTN_VALUE_DOWN = 0x03,
+  BTN_FUNC_LEFT = 0x04,
+  BTN_FUNC_RIGHT = 0x05,
 };
 
 class AnalogPanel : public Thread {
 protected:
   unsigned int pin;
-  unsigned long pressing_miliseconds = 0;
+  unsigned int pressing_miliseconds = 0;
   AnalogPanelButton last_button_pressed = BTN_DEFAULT;
   AnalogPanelButton readPanel();
   void handleEvents(AnalogPanelButton button);
   void (*_onKeyDown)(AnalogPanelButton button);
-  void (*_onKeyPress)(AnalogPanelButton button, unsigned long milliseconds);
-  void (*_onKeyUp)(AnalogPanelButton button, unsigned long milliseconds);
+  void (*_onKeyPress)(AnalogPanelButton button, unsigned int milliseconds);
+  void (*_onKeyUp)(AnalogPanelButton button, unsigned int milliseconds);
 
 public:
   AnalogPanel(unsigned int _pin);
@@ -36,8 +36,8 @@ public:
   void run();
   bool shouldRun(unsigned long time);
   void onKeyDown(void (*callback)(AnalogPanelButton button));
-  void onKeyPress(void (*callback)(AnalogPanelButton button, unsigned long milliseconds));
-  void onKeyUp(void (*callback)(AnalogPanelButton button, unsigned long milliseconds));
+  void onKeyPress(void (*callback)(AnalogPanelButton button, unsigned int milliseconds));
+  void onKeyUp(void (*callback)(AnalogPanelButton button, unsigned int milliseconds));
 };
 
 // Implementation
@@ -55,11 +55,11 @@ void AnalogPanel::onKeyDown(void (*callback)(AnalogPanelButton)){
   _onKeyDown = callback;
 }
 
-void AnalogPanel::onKeyPress(void (*callback)(AnalogPanelButton, unsigned long)){
+void AnalogPanel::onKeyPress(void (*callback)(AnalogPanelButton, unsigned int)){
   _onKeyPress = callback;
 }
 
-void AnalogPanel::onKeyUp(void (*callback)(AnalogPanelButton, unsigned long)){
+void AnalogPanel::onKeyUp(void (*callback)(AnalogPanelButton, unsigned int)){
   _onKeyUp = callback;
 }
 
@@ -101,28 +101,28 @@ void AnalogPanel::handleEvents(AnalogPanelButton button){
   // Kew Up
   if(button == BTN_DEFAULT) {
     if(_onKeyUp != NULL)
-		  _onKeyUp(last_button_pressed, pressing_miliseconds);
+      _onKeyUp(last_button_pressed, pressing_miliseconds);
     pressing_miliseconds = 0;
   }
   // Key Press
   else if(button == last_button_pressed){
     pressing_miliseconds += interval;
     if(_onKeyPress != NULL)
-		  _onKeyPress(button, pressing_miliseconds);
+      _onKeyPress(button, pressing_miliseconds);
   }
   // Key Down
   else if(last_button_pressed == BTN_DEFAULT){
     if(_onKeyDown != NULL)
-		  _onKeyDown(button);
+      _onKeyDown(button);
   }
   // Changed Button
   else {
     if(_onKeyUp != NULL)
-		  _onKeyUp(last_button_pressed, pressing_miliseconds);
+      _onKeyUp(last_button_pressed, pressing_miliseconds);
     pressing_miliseconds = 0;
 
     if(_onKeyDown != NULL)
-		  _onKeyDown(button);
+      _onKeyDown(button);
   }
 
   last_button_pressed = button;

@@ -97,7 +97,7 @@ protected:
 public:
   DisplayDriver();
   void begin();
-  void multiplex_run();
+  void run_multiplex();
 
   void setBrightness(unsigned short _brightness);
   void incrementBrightness();
@@ -222,7 +222,7 @@ void DisplayDriver::print(unsigned short num){
 void DisplayDriver::print(double decimal, int fractionDigits){
   int num = (int) decimal;
   unsigned int places = round((decimal - num) * pow(10, fractionDigits));
-  //unsigned short places = modf(decimal);
+  // unsigned short places = modf(decimal);
   // unsigned short places = round(fmod(decimal, 1) * pow(10, fractionDigits));
 
   char num_str [11] = "";
@@ -230,11 +230,11 @@ void DisplayDriver::print(double decimal, int fractionDigits){
   itoa(num, num_str, 10);
   itoa(places, places_str, 10);
 
+  if(!enabled)
+    decimal_position = cursor + strlen(num_str);
+
   print(num_str);
   print(places_str);
-
-  if(!enabled)
-    decimal_position = strlen(num_str);
 }
 
 void DisplayDriver::print(double decimal){
@@ -360,7 +360,7 @@ void DisplayDriver::begin(){
   DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
   PORTB = B00111110;              // Set all PortB pins to HIGH
 
-  delay(100);
+  delay(50);
   PORTB = B00111100;
   delay(50);
   PORTB = B00111110;
@@ -393,7 +393,7 @@ void DisplayDriver::disable(){
   PORTD = 0x00;             // Clean display pins
 }
 
-void DisplayDriver::multiplex_run(){
+void DisplayDriver::run_multiplex(){
   // Clean display
   PORTD = 0x00;                                   // Sets all PORTD pins to LOW
 
@@ -433,7 +433,7 @@ DisplayDriver Display = DisplayDriver();
 
 // TIMER2 Interrupt
 ISR(TIMER2_COMPA_vect){
-  Display.multiplex_run();
+  Display.run_multiplex();
 }
 
 #endif

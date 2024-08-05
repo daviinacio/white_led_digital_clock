@@ -22,11 +22,11 @@ bool debug = false;
 #define DISP_BR_BUFFER_INTERVAL 2000
 
 #define MAIN_INTERVAL 100
-#define MAIN_SCREEN_HOME 1000
-#define MAIN_SCREEN_LDR 1001
-#define MAIN_SCREEN_CHRONOMETER 1002
-#define MAIN_SCREEN_ADJUST_TIME 1003
-#define MAIN_SCREEN_ADJUST_RTC_FIX 1004
+#define MAIN_SCREEN_HOME 0x00
+#define MAIN_SCREEN_LDR 0x01
+#define MAIN_SCREEN_CHRONOMETER 0x02
+#define MAIN_SCREEN_ADJUST_TIME 0x03
+#define MAIN_SCREEN_ADJUST_RTC_FIX 0x04
 
 #define MAIN_SCREEN_FIRST MAIN_SCREEN_LDR
 #define MAIN_SCREEN_LAST MAIN_SCREEN_ADJUST_RTC_FIX
@@ -46,8 +46,8 @@ bool debug = false;
 
 #define BZ_PIN PB1
 #define BZ_INTERVAL 62
-#define BZ_STATUS_OFF 1100
-#define BZ_STATUS_OLDCLOCK 1101
+#define BZ_STATUS_OFF 0x00
+#define BZ_STATUS_OLDCLOCK 0x01
 
 #define PANEL_PIN A3
 #define PANEL_INTERVAL 200
@@ -106,14 +106,14 @@ Buffer dht_temp_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE);
 Buffer dht_hum_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE);
 
 // Main
-int main_current_screen = MAIN_SCREEN_HOME;
+unsigned short main_current_screen = MAIN_SCREEN_HOME;
 bool main_change_loop = true;
 
 // Chronometer
 int chronometer_counter = 0;
 
 // Buzzer
-int buzzer_status = BZ_STATUS_OFF;
+unsigned short buzzer_status = BZ_STATUS_OFF;
 
 // RTC Fix
 int rtc_fix_interval = 1;
@@ -124,12 +124,14 @@ int adjust_cursor = 0;
 int adjust_cursor_blink = false;
 
 // Time Adjust
-int time_adjust_year = 0;
-int time_adjust_month = 0;
-int time_adjust_day = 0;
-int time_adjust_hour = 0;
-int time_adjust_minute = 0;
-int time_adjust_second = 0;
+unsigned short time_adjust_year = 0;
+unsigned short time_adjust_month = 0;
+unsigned short time_adjust_day = 0;
+unsigned short time_adjust_hour = 0;
+unsigned short time_adjust_minute = 0;
+unsigned short time_adjust_second = 0;
+
+DateTime rtc_adjust;
 
 void setup() {
   /*    *    *  THREADS  *    *    */
@@ -300,33 +302,43 @@ void panel_onKeyDown(AnalogPanelButton button){
   }
 }
 
-void panel_onKeyPress(AnalogPanelButton button, long milliseconds){
+void panel_onKeyPress(AnalogPanelButton button, unsigned int milliseconds){
+  int time = milliseconds / 250;
+
   if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
-    if((button == BTN_VALUE_UP || button == BTN_VALUE_DOWN) && milliseconds > 1000)
+    if((button == BTN_VALUE_UP || button == BTN_VALUE_DOWN) && time == 4)
       disp_brightness_auto();
   }
 }
 
-void panel_onKeyUp(AnalogPanelButton button, long milliseconds){
+void panel_onKeyUp(AnalogPanelButton button, unsigned int milliseconds){
   int time = milliseconds / 250;
+
+  if(button == BTN_HOME){
+    if(time < 2) {
+      main_current_screen = MAIN_SCREEN_HOME;
+      Display.clearScroll();
+    }
+    return;
+  }
+
+  if(!(button == BTN_FUNC_LEFT || button == BTN_FUNC_RIGHT)) return;
 
   if(button == BTN_FUNC_LEFT){
     main_current_screen--;
     if(main_current_screen < MAIN_SCREEN_FIRST)
       main_current_screen = MAIN_SCREEN_LAST;
-    print_current_screen_name();
   }
   else if(button == BTN_FUNC_RIGHT){
     main_current_screen++;
     if(main_current_screen > MAIN_SCREEN_LAST)
       main_current_screen = MAIN_SCREEN_FIRST;
-    print_current_screen_name();
   }
-  else if(button == BTN_HOME){
-    if(time < 2) {
-      main_current_screen = MAIN_SCREEN_HOME;
-      Display.clearScroll();
-    }
+
+  print_current_screen_name();
+
+  if(main_current_screen == MAIN_SCREEN_ADJUST_TIME) {
+    screen_adjust_time__initialize();
   }
 }
 
@@ -334,10 +346,22 @@ void print_current_screen_name(){
   switch(main_current_screen){
     case MAIN_SCREEN_LDR: Display.printScroll("    BRILHO    ", 150); break;
     case MAIN_SCREEN_CHRONOMETER: Display.printScroll("    CRONOMETRO    ", 150); break;
-    case MAIN_SCREEN_ADJUST_RTC_FIX: Display.printScroll("    RTC FIX    ", 150); break;
     case MAIN_SCREEN_ADJUST_TIME: Display.printScroll("    SET TIME    ", 150); break;
+    case MAIN_SCREEN_ADJUST_RTC_FIX: Display.printScroll("    RTC FIX    ", 150); break;
   }
 }
+
+
+/*    *    *      SCREEN EVENTS     *    *    */
+void screen_adjust_time__initialize(){
+  rtc_now = rtc.now();
+  time_adjust_year = rtc_now.year();
+  time_adjust_month = rtc_now.month();
+  time_adjust_day = rtc_now.day();
+  time_adjust_hour = rtc_now.hour();
+  time_adjust_minute = rtc_now.minute();
+}
+
 
 /*    *    *    *    THREAD    *    *    *    */
 
@@ -493,7 +517,7 @@ void thr_main_func() {
           if(time_adjust_year % 100 < 10)
             Display.print(" ");
             
-          Display.printEnd(time_adjust_year % 100);
+          Display.printEnd((int) time_adjust_year % 100);
         }
       }
       break;
@@ -674,6 +698,8 @@ void thr_ir_func(){
       case 0xE51A0707: // Return
       // case 0x0:  // Exit
         if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+          // rtc_now
+
           rtc.adjust(DateTime(
             time_adjust_year, time_adjust_month, time_adjust_day,
             time_adjust_hour, time_adjust_minute, 1
@@ -733,12 +759,7 @@ void thr_ir_func(){
         break; // 3
       case 0xF7080707:
         if (rtc.isrunning()) {
-          rtc_now = rtc.now();
-          time_adjust_year = rtc_now.year();
-          time_adjust_month = rtc_now.month();
-          time_adjust_day = rtc_now.day();
-          time_adjust_hour = rtc_now.hour();
-          time_adjust_minute = rtc_now.minute();
+          screen_adjust_time__initialize();
         }
         
         thr_rtc.enabled = false;
