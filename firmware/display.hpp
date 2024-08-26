@@ -126,6 +126,8 @@ public:
   void printScrollReverse(const char* text);
   void printScrollReverse(const char* text, int _interval);
 
+  bool isScrolling();
+
   void run();
   
   void enable();
@@ -349,6 +351,10 @@ unsigned short DisplayDriver::getBrightness(){
   return brightness;
 }
 
+bool DisplayDriver::isScrolling(){
+  return enabled;
+}
+
 
 // Low level implementation
 void DisplayDriver::begin(){
@@ -408,7 +414,7 @@ void DisplayDriver::run_multiplex(){
     // Set display content
     PORTD ^= content[multiplex_digit];                 // Sets the display content and uses ^= to invert the bits
                                                   // (the display actives with LOW state)
-
+    
     // Set time marker
     if(time_separator && multiplex_digit == DISP_LENGTH -1)
       PORTD ^= (1 << 0);
