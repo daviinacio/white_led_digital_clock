@@ -20,6 +20,7 @@ bool debug = false;
 
 #define DISP_BR_BUFFER_LENGTH 16
 #define DISP_BR_BUFFER_INTERVAL 2000
+#define DISP_BRINK_INTERVAL 300
 
 #define MAIN_INTERVAL 100
 #define MAIN_SCREEN_HOME 0x00
@@ -313,14 +314,14 @@ void onKeyDown(InputKey key){
     }
   }
   else if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
-    main_cursor_blink = false;
+    // main_cursor_blink = false;
 
     if(key == KEY_FUNC_LEFT && main_cursor < 4)
       main_cursor++;
     else if(key == KEY_FUNC_RIGHT && main_cursor > 0)
       main_cursor--;
 
-    handle_adjust_time_values(key);
+    screen_adjust_time__handler(key);
   }
 }
 
@@ -333,7 +334,7 @@ void onKeyPress(InputKey key, unsigned int milliseconds){
   }
   else if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
     if(time > 1)
-      handle_adjust_time_values(key);
+      screen_adjust_time__handler(key);
   }
 }
 
@@ -343,11 +344,10 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
   if(Display.isScrolling() || (main_current_screen == MAIN_SCREEN_HOME && main_cursor == 0)) {
     if(key == KEY_HOME){
       increment(main_current_screen, MAIN_SCREEN_FIRST, MAIN_SCREEN_LAST, true);
+      print_current_screen_name();
 
       if(main_current_screen != MAIN_SCREEN_HOME)
         main_cursor = 0;
-
-      print_current_screen_name();
 
       if(main_current_screen == MAIN_SCREEN_ADJUST_TIME) {
         screen_adjust_time__initialize();
@@ -358,29 +358,30 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
   else if(key == KEY_HOME){
     if(time < 2) {
       if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
-        rtc.adjust(DateTime(
-          time_adjust_year, time_adjust_month, time_adjust_day,
-          time_adjust_hour, time_adjust_minute, 0
-        ));
-        Display.printScroll("SAVE", 1500);
+        screen_adjust_time__submit();
       }
       else {
         Display.clearScroll();
       }
-
-      main_current_screen = MAIN_SCREEN_HOME;
-      main_cursor = 0;
     }
     else {
       Display.clearScroll();
-      main_current_screen = MAIN_SCREEN_HOME;
-      main_cursor = 0;
+      Display.printScroll("----", 1500);
     }
+
+    if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+      screen_adjust_time__destroy();
+    }
+
+    main_current_screen = MAIN_SCREEN_HOME;
+    main_cursor = 0;
+
+
     return;
   }
 
   if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
-    main_cursor_blink = true;
+    // main_cursor_blink = true;
   }
 }
 
@@ -393,7 +394,27 @@ void print_current_screen_name(){
   }
 }
 
-void handle_adjust_time_values(InputKey key){
+
+/*    *    *      SCREEN EVENTS     *    *    */
+void screen_adjust_time__initialize(){
+  rtc_now = rtc.now();
+  time_adjust_year = rtc_now.year();
+  time_adjust_month = rtc_now.month();
+  time_adjust_day = rtc_now.day();
+  time_adjust_hour = rtc_now.hour();
+  time_adjust_minute = rtc_now.minute();
+  // main_cursor_blink = true;
+
+  thr_rtc_fix.enabled = false;
+  thr_rtc.enabled = false;
+}
+
+void screen_adjust_time__destroy(){
+  thr_rtc_fix.enabled = true;
+  thr_rtc.enabled = true;
+}
+
+void screen_adjust_time__handler(InputKey key){
   if(main_cursor == 0) {        // Minute
     if(key == KEY_VALUE_UP)
       increment(time_adjust_minute, 0, 59, true);
@@ -430,16 +451,12 @@ void handle_adjust_time_values(InputKey key){
   }
 }
 
-
-/*    *    *      SCREEN EVENTS     *    *    */
-void screen_adjust_time__initialize(){
-  rtc_now = rtc.now();
-  time_adjust_year = rtc_now.year();
-  time_adjust_month = rtc_now.month();
-  time_adjust_day = rtc_now.day();
-  time_adjust_hour = rtc_now.hour();
-  time_adjust_minute = rtc_now.minute();
-  main_cursor_blink = true;
+void screen_adjust_time__submit(){
+  rtc.adjust(DateTime(
+    time_adjust_year, time_adjust_month, time_adjust_day,
+    time_adjust_hour, time_adjust_minute, 0
+  ));
+  Display.printScroll("SAVE", 1500);
 }
 
 
@@ -454,7 +471,10 @@ void thr_main_func() {
   }
 
   Display.setTimeSeparator(false);
+
   long m = millis();
+  bool idle = ir.isIdle(1000) && panel.isIdle(1000);
+  main_cursor_blink = ir.isIdle(500) && panel.isIdle(500);
   
   switch(main_current_screen){
     case MAIN_SCREEN_HOME:
@@ -464,14 +484,14 @@ void thr_main_func() {
       if(m <= 2000){ /* Do nothing */ } else
       
       // Temperature                  // Each 20s, runs on 16s, per 2s
-      if(((m / 2000 % 10 == 8 && main_cursor == 0) || main_cursor == 1) && dht_temp_buffer.getAverage() != DHT_INIT_VALUE){
+      if(((m / 2000 % 10 == 8 && main_cursor == 0 && idle) || main_cursor == 1) && dht_temp_buffer.getAverage() != DHT_INIT_VALUE){
         Display.setCursor(0);
         Display.print((int) dht_temp_buffer.getAverage());
         Display.printEnd("*C");
       } else
       
       // Humidity                     // Each 20s, runs on 18s, per 2s
-      if(((m / 2000 % 10 == 9 && main_cursor == 0) || main_cursor == 2) && dht_hum_buffer.getAverage() != DHT_INIT_VALUE){
+      if(((m / 2000 % 10 == 9 && main_cursor == 0 && idle) || main_cursor == 2) && dht_hum_buffer.getAverage() != DHT_INIT_VALUE){
         Display.clear();
         Display.setCursor(0);
         Display.print("H");
@@ -537,7 +557,7 @@ void thr_main_func() {
       if(main_cursor == 0 || main_cursor == 1){  // Minutes & Hours
         Display.setCursor(0);
 
-        if((main_cursor == 1 && millis()/500 % 3 == 0) && main_cursor_blink){   // Blink 1/3 on focus
+        if((main_cursor == 1 && millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){   // Blink 1/3 on focus
           Display.print(' ');
           Display.print(' ');
         }
@@ -547,7 +567,7 @@ void thr_main_func() {
           Display.print(time_adjust_hour);
         }
 
-        if((main_cursor == 0 && millis()/500 % 3 == 0) && main_cursor_blink){   // Blink 1/3 on focus
+        if((main_cursor == 0 && millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){   // Blink 1/3 on focus
           Display.print(' ');
           Display.print(' ');
         }
@@ -562,7 +582,7 @@ void thr_main_func() {
         Display.setCursor(0);
         Display.print("D ");
 
-        if((millis()/500 % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
           Display.print("  ");
         }
         else {
@@ -577,7 +597,7 @@ void thr_main_func() {
         Display.setCursor(0);
         Display.print("M ");
 
-        if((millis()/500 % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
           Display.print("  ");
         }
         else {
@@ -592,7 +612,7 @@ void thr_main_func() {
         Display.setCursor(0);
         Display.print("Y ");
 
-        if((millis()/500 % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
           Display.print("  ");
         }
         else {
@@ -608,7 +628,7 @@ void thr_main_func() {
       if(main_cursor == 0){  // Interval
         Display.setCursor(0);
         
-        if((millis()/500 % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
           Display.clear();
         }
         else {
@@ -620,7 +640,7 @@ void thr_main_func() {
         Display.setCursor(0);
         Display.print("OP ");
         
-        if((millis()/500 % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
+        if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
           Display.print(" ");
         }
         else {

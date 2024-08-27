@@ -28,6 +28,7 @@ public:
   void onKeyDown(void (*callback)(InputKey key));
   void onKeyPress(void (*callback)(InputKey key, unsigned int milliseconds));
   void onKeyUp(void (*callback)(InputKey key, unsigned int milliseconds));
+  bool isIdle(unsigned int milliseconds);
 };
 
 // Implementation
@@ -105,6 +106,10 @@ void Input::handleEvents(InputKey button){
   else {
     Thread::run();
   }
+}
+
+bool Input::isIdle(unsigned int milliseconds){
+  return (millis() - milliseconds) >= last_run;
 }
 
 #endif
