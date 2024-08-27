@@ -8,8 +8,8 @@
 #define DISP_PIN_LAST PB5
 // #define DISP_BR_MIN 1
 // #define DISP_BR_MAX 64
-#define DISP_DEFAULT_SCROLL_INTERVAL 800
-#define DISP_FRACTION_DIGITS 2
+#define DISP_DEFAULT_SCROLL_INTERVAL 200
+#define DISP_DEFAULT_FRACTION_DIGITS 2
 
 // Binary data
 const byte seven_seg_ascii_init = ' '; // First mapped ASCII position
@@ -161,31 +161,19 @@ void DisplayDriver::run(){
     return;
   }
 
-  for(unsigned short i = 0; i < DISP_LENGTH; i++)
-    content[i] = 0x00;
-  cursor = 0;
+  clear();
+  setCursor(0);
 
+  // Slice the text to the length of the screen with scroll offset
   char slice_str [DISP_LENGTH] = { 0 };
-
   if(scroll_forward)
     memcpy(slice_str, &scroll_content[0] + scroll_cursor, DISP_LENGTH);
   else 
     memcpy(slice_str, &scroll_content[0] + scroll_content_length - scroll_cursor - DISP_LENGTH, DISP_LENGTH);
-
   slice_str[DISP_LENGTH] = 0;
 
   scroll_cursor++;
-
-  size_t slice_str_len = strlen(slice_str);
-
-  for(int i = 0; i < slice_str_len && cursor < DISP_LENGTH; i++){
-    content[cursor] = (char) pgm_read_word(&(
-      seven_seg_asciis[
-        ((int) toupper(slice_str[i])) - seven_seg_ascii_init
-      ]
-    ));
-    cursor++;
-  }
+  print(slice_str);
 
   Thread::run();
 }
@@ -193,20 +181,16 @@ void DisplayDriver::run(){
 
 // Print methods
 void DisplayDriver::setCursor(unsigned short col){
-  if(enabled) return;
   cursor = col % DISP_LENGTH;
 }
 
 void DisplayDriver::clear(){
-  if(enabled) return;
   for(int i = 0; i < DISP_LENGTH; i++)
     content[i] = 0x00;
 }
 
 void DisplayDriver::print(char c){
   decimal_position = 0;
-
-  if(enabled) return;
   
   c = toupper(c);
   content[cursor] = (char) pgm_read_word(&(seven_seg_asciis[((int) c) - seven_seg_ascii_init]));
@@ -219,8 +203,8 @@ void DisplayDriver::print(const char* c){
 }
 
 void DisplayDriver::print(const __FlashStringHelper* text){
-  char buffer[20];
-  strncpy_P(buffer, (const char*)text, 20);
+  char buffer[16];
+  strncpy_P(buffer, (const char*)text, 16);
   print(buffer);
 }
 
@@ -253,7 +237,7 @@ void DisplayDriver::print(double decimal, int fractionDigits){
 }
 
 void DisplayDriver::print(double decimal){
-  print(decimal, DISP_FRACTION_DIGITS);
+  print(decimal, DISP_DEFAULT_FRACTION_DIGITS);
 }
 
 void DisplayDriver::printEnd(char c){
@@ -267,8 +251,8 @@ void DisplayDriver::printEnd(const char* c){
 }
 
 void DisplayDriver::printEnd(const __FlashStringHelper* text){
-  char buffer[20];
-  strncpy_P(buffer, (const char*)text, 20);
+  char buffer[16];
+  strncpy_P(buffer, (const char*)text, 16);
   printEnd(buffer);
 }
 
@@ -300,7 +284,7 @@ void DisplayDriver::printEnd(double decimal, int fractionDigits){
 }
 
 void DisplayDriver::printEnd(double decimal){
-  printEnd(decimal, DISP_FRACTION_DIGITS);
+  printEnd(decimal, DISP_DEFAULT_FRACTION_DIGITS);
 }
 
 void DisplayDriver::clearScroll(){
@@ -328,7 +312,7 @@ void DisplayDriver::printScroll(const __FlashStringHelper * text, int _interval)
   time_separator = false;
   decimal_position = 0;
   scroll_cursor = 0;
-  strncpy_P(scroll_content, (const char*)text, 20);
+  strncpy_P(scroll_content, (const char*)text, 32);
   scroll_forward = true;
   enabled = true;
   setInterval(_interval);
@@ -356,7 +340,7 @@ void DisplayDriver::printScrollReverse(const __FlashStringHelper * text, int _in
   time_separator = false;
   decimal_position = 0;
   scroll_cursor = 0;
-  strncpy_P(scroll_content, (const char*)text, 20);
+  strncpy_P(scroll_content, (const char*)text, 256);
   scroll_forward = false;
   enabled = true;
   setInterval(_interval);
@@ -390,7 +374,6 @@ void DisplayDriver::decrementBrightness(){
 }
 
 void DisplayDriver::setTimeSeparator(bool _time_separator){
-  if(enabled) return;
   time_separator = _time_separator;
 }
 

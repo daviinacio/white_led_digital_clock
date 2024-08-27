@@ -53,6 +53,7 @@ bool debug_mode = false;
 
 #define PANEL_PIN A3
 #define PANEL_INTERVAL 100
+#define PANEL_LONG_PRESS 8
 
 #define ADJUST_TIME_CURSOR_RANGE 5
 #define ADJUST_RTC_FIX_CURSOR_RANGE 2
@@ -321,20 +322,36 @@ void onKeyDown(InputKey key){
 }
 
 void onKeyPress(InputKey key, unsigned int milliseconds){
-  int time = milliseconds / 250;
+  int time = milliseconds / PANEL_INTERVAL;
 
   if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
-    if((key == KEY_VALUE_UP || key == KEY_VALUE_DOWN) && time == 4)
+    if((key == KEY_VALUE_UP || key == KEY_VALUE_DOWN) && time == PANEL_LONG_PRESS)
       disp_brightness_auto();
   }
-  else if(main_current_screen == MAIN_SCREEN_ADJUST_TIME && time > 1)
+  else if(main_current_screen == MAIN_SCREEN_ADJUST_TIME && time > PANEL_LONG_PRESS)
     screen_adjust_time__handler(key);
-  else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX && time > 1)
+  else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX && time > PANEL_LONG_PRESS)
     screen_adjust_rtc_fix__handler(key, time / 2);
+
+  // Home button long press
+  if(key == KEY_HOME && time == PANEL_LONG_PRESS) {
+    if(main_current_screen == MAIN_SCREEN_HOME && !Display.isScrolling()){
+      Display.printScroll(F("    FELIZ DIA DO PROGRAMADOR    "));
+    }
+    else {
+      main_screen_destroy();
+      Display.clearScroll();
+      Display.setCursor(0);
+      Display.print(F("----"));
+      Display.printScroll(F("----"), 1000);
+    }
+  }
 }
 
 void onKeyUp(InputKey key, unsigned int milliseconds){
-  int time = milliseconds / 250;
+  int time = milliseconds / PANEL_INTERVAL;
+
+  if(time >= PANEL_LONG_PRESS) return;
 
   if(Display.isScrolling() || (main_current_screen == MAIN_SCREEN_HOME && main_cursor == 0)) {
     if(key == KEY_HOME){
@@ -348,35 +365,19 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
         screen_adjust_time__initialize();
       else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
         screen_adjust_rtc_fix__initialize();
-      
     }
     return;
   }
   else if(key == KEY_HOME){
-    if(time < 2) {
-      if(main_current_screen == MAIN_SCREEN_ADJUST_TIME)
-        screen_adjust_time__submit();
-      else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
-        screen_adjust_rtc_fix__submit();
-      else {
-        Display.clearScroll();
-      }
-    }
+    if(main_current_screen == MAIN_SCREEN_ADJUST_TIME)
+      screen_adjust_time__submit();
+    else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
+      screen_adjust_rtc_fix__submit();
     else {
       Display.clearScroll();
-      Display.printScroll(F("----"), 1500);
     }
 
-    if(main_current_screen == MAIN_SCREEN_ADJUST_TIME)
-      screen_adjust_time__destroy();
-    else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
-      screen_adjust_rtc_fix__destroy();
-    
-
-    main_current_screen = MAIN_SCREEN_HOME;
-    main_cursor = 0;
-
-
+    main_screen_destroy();
     return;
   }
 
@@ -385,7 +386,18 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
   }
 }
 
+void main_screen_destroy(){
+  if(main_current_screen == MAIN_SCREEN_ADJUST_TIME)
+    screen_adjust_time__destroy();
+  else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
+    screen_adjust_rtc_fix__destroy();
+  
+  main_current_screen = MAIN_SCREEN_HOME;
+  main_cursor = 0;
+}
+
 void print_current_screen_name(){
+  Display.clearScroll();
   switch(main_current_screen){
     case MAIN_SCREEN_LDR: Display.printScroll(F("    BRILHO    "), 150); break;
     case MAIN_SCREEN_CHRONOMETER: Display.printScroll(F("    CRONOMETRO    "), 150); break;
@@ -520,6 +532,9 @@ void thr_main_func() {
     return;
   }
 
+  if(Display.isScrolling())
+    return;
+
   Display.setTimeSeparator(false);
 
   long m = millis();
@@ -585,7 +600,7 @@ void thr_main_func() {
         unsigned short seconds = (chronometer_counter / 10) % 60;
 
         if(minute < 10)
-          Display.print(' ');
+          Display.print(F(" "));
         Display.print(minute);
 
         if(seconds < 10)
@@ -608,8 +623,7 @@ void thr_main_func() {
         Display.setCursor(0);
 
         if((main_cursor == 1 && millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){   // Blink 1/3 on focus
-          Display.print(' ');
-          Display.print(' ');
+          Display.print(F("  "));
         }
         else {
           if(time_adjust_hour < 10)
@@ -618,8 +632,7 @@ void thr_main_func() {
         }
 
         if((main_cursor == 0 && millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){   // Blink 1/3 on focus
-          Display.print(' ');
-          Display.print(' ');
+          Display.print(F("  "));
         }
         else {
           if(time_adjust_minute < 10)
