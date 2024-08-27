@@ -8,18 +8,24 @@ void range(unsigned short& value, unsigned short min, unsigned short max){
     value = min;
 }
 
+void increment(unsigned short& value, unsigned short min, unsigned short max, bool loop, unsigned short mult){
+  value = value < max ? value + min(max - value, mult) : (
+    loop ? min : max
+  );
+}
+
 void increment(unsigned short& value, unsigned short min, unsigned short max, bool loop){
-  if(loop)
-    value = value < max ? value + 1 : min;
-  else
-    value = value < max ? value + 1 : value;
+  increment(value, min, max, loop, 1);
+}
+
+void decrement(unsigned short& value, unsigned short min, unsigned short max, bool loop, unsigned short mult){
+  value = value > min ? value - min(value, mult) : (
+    loop ? max : min
+  );
 }
 
 void decrement(unsigned short& value, unsigned short min, unsigned short max, bool loop){
-  if(loop)
-    value = value > min ? value - 1 : max;
-  else
-    value = value > min ? value - 1 : value;
+  decrement(value, min, max, loop, 1);
 }
 
 unsigned short month_last_day(unsigned short year, unsigned short month){

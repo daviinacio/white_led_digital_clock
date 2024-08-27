@@ -9,7 +9,8 @@
  * 
  */
 
-bool debug = false;
+// Disables multiplex display, and enables Serial print
+bool debug_mode = false;
 
 #define LDR_PIN A2
 #define LDR_MIN 0
@@ -68,14 +69,12 @@ bool debug = false;
 #include "RTClib.h"
 
 #include "DHT.h"
-
-#include <Buffer.h>
-
 // Import Modules
 #include "display.hpp"
 #include "panel.hpp"
 #include "infrared.hpp"
 #include "utils.hpp"
+#include "buffer.hpp"
 
 // #include "light-sensor.hpp"
 
@@ -115,14 +114,14 @@ unsigned short main_cursor = 0;
 bool main_cursor_blink = false;
 
 // Chronometer
-int chronometer_counter = 0;
+unsigned int chronometer_counter = 0;
 
 // Buzzer
 unsigned short buzzer_status = BZ_STATUS_OFF;
 
 // RTC Fix
-int rtc_fix_interval = 1;
-int rtc_fix_operation = 1;
+unsigned short rtc_fix_interval = 1;
+unsigned short rtc_fix_operation = 1;
 
 // Time Adjust
 unsigned short time_adjust_year = 0;
@@ -188,10 +187,10 @@ void setup() {
   // IrReceiver.begin(IR_PIN);
   //ir_recv.enableIRIn();
   
-  if(debug){
+  if(debug_mode){
     Serial.begin(9600);
     delay(50);
-    Serial.println("Debug mode initialized");
+    Serial.println("debug_mode mode initialized");
   }
 
   Display.begin();
@@ -201,7 +200,7 @@ void setup() {
     // Blink error for five seconds
     if(millis()/500 % 3 >= 1){
       Display.setCursor(0);
-      Display.print("ERRO");
+      Display.print(F("ERRO"));
     } else {
       Display.clear();
     }
@@ -233,13 +232,7 @@ void setup() {
   /*    *     EEPROM READ     *    */
   
   if(EEPROM.isReady()){
-    rtc_fix_operation = EEPROM.readInt(
-      RTC_FIX_OPERATION_EEPROM_ADDRESS
-    );
-    
-    rtc_fix_interval = EEPROM.readInt(
-      RTC_FIX_INTERVAL_EEPROM_ADDRESS
-    );
+    rtc_fix__read();
 
     if(rtc_fix_interval == 0 && main_current_screen == MAIN_SCREEN_HOME) {
       // Goto rtc fix adjust screen
@@ -261,24 +254,20 @@ void setup() {
   // thr_dht_func();
 
   /*    *     END OF BOOT     *    */
-  if(debug){
+
+  if(debug_mode){
     Display.disable();
   }
   else {
     Display.enable();
   }
 
-  if(!debug){
+  if(!debug_mode){
     Display.clear();
     Display.setCursor(0);
-    Display.print("DAVI");
-    // Display.printEnd(1.2, 1);
-    // Display.printScroll("Test", 1000);
+    Display.print(F("DAVI"));
   }
-  // Display.printScroll("Test", 1000);
 
-  // DEBUG
-  //thr_ldr.enabled = false;
   disp_brightness_buffer.fill(DISP_BR_MAX);
 }
 
@@ -314,14 +303,20 @@ void onKeyDown(InputKey key){
     }
   }
   else if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
-    // main_cursor_blink = false;
-
-    if(key == KEY_FUNC_LEFT && main_cursor < 4)
-      main_cursor++;
-    else if(key == KEY_FUNC_RIGHT && main_cursor > 0)
-      main_cursor--;
+    if(key == KEY_FUNC_LEFT)
+      increment(main_cursor, 0, 4, false);
+    else if(key == KEY_FUNC_RIGHT)
+      decrement(main_cursor, 0, 4, false);
 
     screen_adjust_time__handler(key);
+  }
+  else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX){
+    if(key == KEY_FUNC_LEFT)
+      increment(main_cursor, 0, 1, false);
+    else if(key == KEY_FUNC_RIGHT)
+      decrement(main_cursor, 0, 1, false);
+
+    screen_adjust_rtc_fix__handler(key, 1);
   }
 }
 
@@ -332,10 +327,10 @@ void onKeyPress(InputKey key, unsigned int milliseconds){
     if((key == KEY_VALUE_UP || key == KEY_VALUE_DOWN) && time == 4)
       disp_brightness_auto();
   }
-  else if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
-    if(time > 1)
-      screen_adjust_time__handler(key);
-  }
+  else if(main_current_screen == MAIN_SCREEN_ADJUST_TIME && time > 1)
+    screen_adjust_time__handler(key);
+  else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX && time > 1)
+    screen_adjust_rtc_fix__handler(key, time / 2);
 }
 
 void onKeyUp(InputKey key, unsigned int milliseconds){
@@ -349,29 +344,34 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
       if(main_current_screen != MAIN_SCREEN_HOME)
         main_cursor = 0;
 
-      if(main_current_screen == MAIN_SCREEN_ADJUST_TIME) {
+      if(main_current_screen == MAIN_SCREEN_ADJUST_TIME) 
         screen_adjust_time__initialize();
-      }
+      else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
+        screen_adjust_rtc_fix__initialize();
+      
     }
     return;
   }
   else if(key == KEY_HOME){
     if(time < 2) {
-      if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+      if(main_current_screen == MAIN_SCREEN_ADJUST_TIME)
         screen_adjust_time__submit();
-      }
+      else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
+        screen_adjust_rtc_fix__submit();
       else {
         Display.clearScroll();
       }
     }
     else {
       Display.clearScroll();
-      Display.printScroll("----", 1500);
+      Display.printScroll(F("----"), 1500);
     }
 
-    if(main_current_screen == MAIN_SCREEN_ADJUST_TIME){
+    if(main_current_screen == MAIN_SCREEN_ADJUST_TIME)
       screen_adjust_time__destroy();
-    }
+    else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
+      screen_adjust_rtc_fix__destroy();
+    
 
     main_current_screen = MAIN_SCREEN_HOME;
     main_cursor = 0;
@@ -387,10 +387,10 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
 
 void print_current_screen_name(){
   switch(main_current_screen){
-    case MAIN_SCREEN_LDR: Display.printScroll("    BRILHO    ", 150); break;
-    case MAIN_SCREEN_CHRONOMETER: Display.printScroll("    CRONOMETRO    ", 150); break;
-    case MAIN_SCREEN_ADJUST_TIME: Display.printScroll("    SET TIME    ", 150); break;
-    case MAIN_SCREEN_ADJUST_RTC_FIX: Display.printScroll("    RTC FIX    ", 150); break;
+    case MAIN_SCREEN_LDR: Display.printScroll(F("    BRILHO    "), 150); break;
+    case MAIN_SCREEN_CHRONOMETER: Display.printScroll(F("    CRONOMETRO    "), 150); break;
+    case MAIN_SCREEN_ADJUST_TIME: Display.printScroll(F("    SET TIME    "), 150); break;
+    case MAIN_SCREEN_ADJUST_RTC_FIX: Display.printScroll(F("    RTC FIX    "), 150); break;
   }
 }
 
@@ -456,14 +456,64 @@ void screen_adjust_time__submit(){
     time_adjust_year, time_adjust_month, time_adjust_day,
     time_adjust_hour, time_adjust_minute, 0
   ));
-  Display.printScroll("SAVE", 1500);
+  Display.printScroll(F("SAVE"), 1500);
+}
+
+
+
+void screen_adjust_rtc_fix__initialize(){
+  rtc_fix__read();
+  thr_rtc_fix.enabled = false;
+  thr_rtc.enabled = false;
+}
+
+void screen_adjust_rtc_fix__destroy(){
+  rtc_fix__read();
+  thr_rtc_fix.enabled = true;
+  thr_rtc.enabled = true;
+}
+
+void screen_adjust_rtc_fix__handler(InputKey key, unsigned short mult){
+  if(main_cursor == 0) {        // Interval
+    if(key == KEY_VALUE_UP)
+      increment(rtc_fix_interval, 1, 9999, false, mult);
+    else if(key == KEY_VALUE_DOWN)
+      decrement(rtc_fix_interval, 1, 9999, false, mult); 
+  }
+  else if(main_cursor == 1) {   // Operation
+    if(key == KEY_VALUE_UP)
+      increment(rtc_fix_operation, 0, 2, false, mult);
+    else if(key == KEY_VALUE_DOWN)
+      decrement(rtc_fix_operation, 0, 2, false, mult);
+  }
+}
+
+void screen_adjust_rtc_fix__submit(){
+  rtc_fix__write();
+  thr_rtc_fix.setInterval((uint32_t) rtc_fix_interval * 1000);
+  Display.printScroll(F("SAVE"), 1500);
+}
+
+void rtc_fix__read(){
+  rtc_fix_operation = EEPROM.readInt(
+    RTC_FIX_OPERATION_EEPROM_ADDRESS
+  );
+  
+  rtc_fix_interval = EEPROM.readInt(
+    RTC_FIX_INTERVAL_EEPROM_ADDRESS
+  );
+}
+
+void rtc_fix__write(){
+  EEPROM.writeInt(RTC_FIX_INTERVAL_EEPROM_ADDRESS, rtc_fix_interval);
+  EEPROM.writeInt(RTC_FIX_OPERATION_EEPROM_ADDRESS, rtc_fix_operation);
 }
 
 
 /*    *    *    *    THREAD    *    *    *    */
 
 void thr_main_func() {
-  if(debug){
+  if(debug_mode){
     // PinMode display digits pins
     PORTD = 0b00000010;                   // Set all PortD pins to HIGH
     PORTB = 0b00111100;              // Set all PortB pins to HIGH
@@ -487,14 +537,14 @@ void thr_main_func() {
       if(((m / 2000 % 10 == 8 && main_cursor == 0 && idle) || main_cursor == 1) && dht_temp_buffer.getAverage() != DHT_INIT_VALUE){
         Display.setCursor(0);
         Display.print((int) dht_temp_buffer.getAverage());
-        Display.printEnd("*C");
+        Display.printEnd(F("*C"));
       } else
       
       // Humidity                     // Each 20s, runs on 18s, per 2s
       if(((m / 2000 % 10 == 9 && main_cursor == 0 && idle) || main_cursor == 2) && dht_hum_buffer.getAverage() != DHT_INIT_VALUE){
         Display.clear();
         Display.setCursor(0);
-        Display.print("H");
+        Display.print(F("H"));
         Display.printEnd(dht_hum_buffer.getAverage());
       }
       
@@ -515,10 +565,10 @@ void thr_main_func() {
 
     case MAIN_SCREEN_LDR:
       Display.setCursor(0);
-      Display.print("BR");
+      Display.print(F("BR"));
 
       if(Display.getBrightness() < 10)
-        Display.print(" ");
+        Display.print(F(" "));
       Display.printEnd(Display.getBrightness());
       break;
 
@@ -580,14 +630,14 @@ void thr_main_func() {
       else
       if(main_cursor == 2){  // Day
         Display.setCursor(0);
-        Display.print("D ");
+        Display.print(F("D "));
 
         if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
-          Display.print("  ");
+          Display.print(F("  "));
         }
         else {
           if(time_adjust_day % 100 < 10)
-            Display.print(" ");
+            Display.print(F(" "));
             
           Display.printEnd(time_adjust_day);
         }
@@ -595,14 +645,14 @@ void thr_main_func() {
       else
       if(main_cursor == 3){  // Month
         Display.setCursor(0);
-        Display.print("M ");
+        Display.print(F("M "));
 
         if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
-          Display.print("  ");
+          Display.print(F("  "));
         }
         else {
           if(time_adjust_month % 100 < 10)
-            Display.print(" ");
+            Display.print(F(" "));
             
           Display.printEnd(time_adjust_month);
         }
@@ -610,14 +660,14 @@ void thr_main_func() {
       else
       if(main_cursor == 4){  // Year
         Display.setCursor(0);
-        Display.print("Y ");
+        Display.print(F("Y "));
 
         if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
-          Display.print("  ");
+          Display.print(F("  "));
         }
         else {
           if(time_adjust_year % 100 < 10)
-            Display.print(" ");
+            Display.print(F(" "));
             
           Display.printEnd((int) time_adjust_year % 100);
         }
@@ -626,22 +676,20 @@ void thr_main_func() {
 
     case MAIN_SCREEN_ADJUST_RTC_FIX:
       if(main_cursor == 0){  // Interval
+        Display.clear();
         Display.setCursor(0);
         
-        if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
-          Display.clear();
-        }
-        else {
+        if(!((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink)){  // Blink 1/3 on focus
           Display.printEnd(rtc_fix_interval);
         }
       }
       else
       if(main_cursor == 1){ // Opetarion
         Display.setCursor(0);
-        Display.print("OP ");
+        Display.print(F("OP "));
         
         if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && main_cursor_blink){  // Blink 1/3 on focus
-          Display.print(" ");
+          Display.print(F(" "));
         }
         else {
           Display.printEnd(rtc_fix_operation);
@@ -652,7 +700,7 @@ void thr_main_func() {
     default:
       Display.clear();
       Display.setCursor(0);
-      Display.print("MERR");
+      Display.print(F("MERR"));
       break;
   }
 }
@@ -680,10 +728,10 @@ void thr_rtc_func(){
 
 void thr_dht_func(){
   // Disable display timer while dht read
-  if(!debug) Display.disable();
+  if(!debug_mode) Display.disable();
   float dht_temp_read = dht.readTemperature();
   float dht_hum_read = dht.readHumidity();
-  if(!debug) Display.enable();
+  if(!debug_mode) Display.enable();
 
   // Ignore read errors
   if(isnan(dht_temp_read) || isnan(dht_hum_read)) return;
@@ -695,10 +743,10 @@ void thr_dht_func(){
   if(dht_hum_buffer.empty())  dht_hum_buffer.fill((int) dht_hum_read);
   else                        dht_hum_buffer.insert((int) dht_hum_read);
 
-  if(debug){
-    Serial.print("DHT sensor: T ");
+  if(debug_mode){
+    Serial.print(F("DHT sensor: T "));
     Serial.print((int) dht_temp_read);
-    Serial.print(", H ");
+    Serial.print(F(", H "));
     Serial.println((int) dht_hum_read);
   }
 }
@@ -749,13 +797,13 @@ void thr_rtc_fix_func(){
 }
 
 
-void debug_print_key_name(int key){
+void debug_mode_print_key_name(int key){
   switch(key){
-    case KEY_HOME: Serial.print("'home'"); break;
-    case KEY_VALUE_UP: Serial.print("'value up'"); break;
-    case KEY_VALUE_DOWN: Serial.print("'value down'"); break;
-    case KEY_FUNC_LEFT: Serial.print("'func left'"); break;
-    case KEY_FUNC_RIGHT: Serial.print("'func right'"); break;
+    case KEY_HOME: Serial.print(F("'home'")); break;
+    case KEY_VALUE_UP: Serial.print(F("'value up'")); break;
+    case KEY_VALUE_DOWN: Serial.print(F("'value down'")); break;
+    case KEY_FUNC_LEFT: Serial.print(F("'func left'")); break;
+    case KEY_FUNC_RIGHT: Serial.print(F("'func right'")); break;
   }
 }
 
@@ -773,6 +821,6 @@ void disp_brightness_down(){
 
 void disp_brightness_auto(){
   if(!thr_ldr.enabled)
-    Display.printScroll("AUTO", 1500);
+    Display.printScroll(F("AUTO"), 1500);
   thr_ldr.enabled = true; 
 }

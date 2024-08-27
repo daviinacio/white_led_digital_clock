@@ -1,3 +1,4 @@
+#include "Arduino.h"
 #ifndef WLDC_DISPLAY_DRIVER_H
 #define WLDC_DISPLAY_DRIVER_H
 #include <Thread.h>
@@ -7,7 +8,7 @@
 #define DISP_PIN_LAST PB5
 // #define DISP_BR_MIN 1
 // #define DISP_BR_MAX 64
-#define DISP_DEFAULT_SCROLL_INTERVAL 200
+#define DISP_DEFAULT_SCROLL_INTERVAL 800
 #define DISP_FRACTION_DIGITS 2
 
 // Binary data
@@ -110,12 +111,14 @@ public:
   void clear();
   void print(char c);
   void print(const char* c);
+  void print(const __FlashStringHelper *);
   void print(int num);
   void print(unsigned short num);
   void print(double decimal);
   void print(double decimal, int fractionDigits);
   void printEnd(char c);
   void printEnd(const char* c);
+  void printEnd(const __FlashStringHelper *);
   void printEnd(int num);
   void printEnd(unsigned short num);
   void printEnd(double decimal);
@@ -123,8 +126,12 @@ public:
   void clearScroll();
   void printScroll(const char* text);
   void printScroll(const char* text, int _interval);
+  void printScroll(const __FlashStringHelper *);
+  void printScroll(const __FlashStringHelper *, int _interval);
   void printScrollReverse(const char* text);
   void printScrollReverse(const char* text, int _interval);
+  void printScrollReverse(const __FlashStringHelper *);
+  void printScrollReverse(const __FlashStringHelper *, int _interval);
 
   bool isScrolling();
 
@@ -211,6 +218,12 @@ void DisplayDriver::print(const char* c){
     print(c[i]);
 }
 
+void DisplayDriver::print(const __FlashStringHelper* text){
+  char buffer[20];
+  strncpy_P(buffer, (const char*)text, 20);
+  print(buffer);
+}
+
 void DisplayDriver::print(int num){
   char num_str [11] = "";
   itoa(num, num_str, 10);
@@ -249,8 +262,14 @@ void DisplayDriver::printEnd(char c){
 }
 
 void DisplayDriver::printEnd(const char* c){
-  setCursor(DISP_LENGTH - strlen(c));
+  setCursor(DISP_LENGTH - min(strlen(c), DISP_LENGTH));
   print(c);
+}
+
+void DisplayDriver::printEnd(const __FlashStringHelper* text){
+  char buffer[20];
+  strncpy_P(buffer, (const char*)text, 20);
+  printEnd(buffer);
 }
 
 void DisplayDriver::printEnd(int num){
@@ -305,6 +324,20 @@ void DisplayDriver::printScroll(const char* text){
   printScroll(text, DISP_DEFAULT_SCROLL_INTERVAL);
 }
 
+void DisplayDriver::printScroll(const __FlashStringHelper * text, int _interval){
+  time_separator = false;
+  decimal_position = 0;
+  scroll_cursor = 0;
+  strncpy_P(scroll_content, (const char*)text, 20);
+  scroll_forward = true;
+  enabled = true;
+  setInterval(_interval);
+}
+
+void DisplayDriver::printScroll(const __FlashStringHelper * text){
+  printScroll(text, DISP_DEFAULT_SCROLL_INTERVAL);
+}
+
 void DisplayDriver::printScrollReverse(const char* text, int _interval){
   time_separator = false;
   decimal_position = 0;
@@ -317,6 +350,20 @@ void DisplayDriver::printScrollReverse(const char* text, int _interval){
 
 void DisplayDriver::printScrollReverse(const char* text){
   printScrollReverse(text, DISP_DEFAULT_SCROLL_INTERVAL);
+}
+
+void DisplayDriver::printScrollReverse(const __FlashStringHelper * text, int _interval){
+  time_separator = false;
+  decimal_position = 0;
+  scroll_cursor = 0;
+  strncpy_P(scroll_content, (const char*)text, 20);
+  scroll_forward = false;
+  enabled = true;
+  setInterval(_interval);
+}
+
+void DisplayDriver::printScrollReverse(const __FlashStringHelper * text) {
+ printScrollReverse(text, DISP_DEFAULT_SCROLL_INTERVAL);
 }
 
 
