@@ -12,6 +12,8 @@
 // Disables multiplex display, and enables Serial print
 bool debug_mode = false;
 
+#define WAKE_PIN A1
+
 #define LDR_PIN A2
 #define LDR_MIN 0
 #define LDR_MAX 650
@@ -25,12 +27,12 @@ bool debug_mode = false;
 
 #define MAIN_INTERVAL 100
 #define MAIN_SCREEN_HOME 0x00
-#define MAIN_SCREEN_LDR 0x01
-#define MAIN_SCREEN_CHRONOMETER 0x02
+#define MAIN_SCREEN_CHRONOMETER 0x01
+#define MAIN_SCREEN_LDR 0x02
 #define MAIN_SCREEN_ADJUST_TIME 0x03
 #define MAIN_SCREEN_ADJUST_RTC_FIX 0x04
 
-#define MAIN_SCREEN_FIRST MAIN_SCREEN_LDR
+#define MAIN_SCREEN_FIRST MAIN_SCREEN_CHRONOMETER
 #define MAIN_SCREEN_LAST MAIN_SCREEN_ADJUST_RTC_FIX
 
 #define CHRONOMETER_INTERVAL 100
@@ -65,19 +67,18 @@ bool debug_mode = false;
 #include <EEPROMex.h>
 #include <Thread.h>
 #include <ThreadController.h>
-
 #include <Wire.h>
-#include "RTClib.h"
+#include <avr/sleep.h>
 
+#include "RTClib.h"
 #include "DHT.h"
+
 // Import Modules
 #include "display.hpp"
 #include "panel.hpp"
 #include "infrared.hpp"
 #include "utils.hpp"
 #include "buffer.hpp"
-
-// #include "light-sensor.hpp"
 
 // Modules
 AnalogPanel panel = AnalogPanel(PANEL_PIN, PANEL_INTERVAL);
@@ -277,8 +278,64 @@ void loop() {
   cpu.run();
 }
 
+void wake() {
+  
+}
+
+void sleep(){
+  // Fake sleep
+  cpu.enabled = false;
+  Display.disable();
+
+  while(analogRead(PANEL_PIN) > 200);
+
+  cpu.enabled = true;
+  Display.enable();
+
+  // static byte prevADCSRA = ADCSRA;
+  // ADCSRA = 0;
+
+  // set_sleep_mode(SLEEP_MODE_STANDBY);
+  // sleep_enable();
+
+  // MCUCR = bit(BODS) | bit(BODSE);
+  // MCUCR = bit(BODS);
+
+  // noInterrupts();
+  // attachInterrupt(digitalPinToInterrupt(WAKE_PIN), wake, LOW);
+  // interrupts();
+
+  // sleep_cpu();
+
+  // wake();
+
+  // ADCSRA = prevADCSRA;
+
+
+  
+  // // Disable ADC
+  // ADCSRA &= ~(1 << 7);
+
+  // // Enable sleep
+  // SMCR |= (1 << 2);
+  // SMCR |= 1;
+
+  // // Disable BOD
+  // MCUCR |= (3 << 5);
+  // MCUCR |= (MCUCR & ~(1 << 5)) | (1 << 6);
+  // __asm__ __volatile__("sleep");
+}
+
 /*    *    *    *    MODULES   *    *    *    */
 void onKeyDown(InputKey key){
+  // Cooldown
+  if(!panel.isIdle(200)) return;
+
+  if(debug_mode){
+    Serial.print(F("onKeyDown: Key "));
+    Serial.println((int) key);
+  }
+
   if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
     if(key == KEY_VALUE_UP)
       disp_brightness_up();
@@ -324,6 +381,14 @@ void onKeyDown(InputKey key){
 void onKeyPress(InputKey key, unsigned int milliseconds){
   int time = milliseconds / PANEL_INTERVAL;
 
+  if(debug_mode){
+    Serial.print(F("onKeyPress: Key "));
+    Serial.print((int) key);
+    Serial.print(F(", "));
+    Serial.print((int) milliseconds);
+    Serial.println(F("ms"));
+  }
+
   if(main_current_screen == MAIN_SCREEN_HOME || main_current_screen == MAIN_SCREEN_LDR) {
     if((key == KEY_VALUE_UP || key == KEY_VALUE_DOWN) && time == PANEL_LONG_PRESS)
       disp_brightness_auto();
@@ -336,10 +401,29 @@ void onKeyPress(InputKey key, unsigned int milliseconds){
   // Home button long press
   if(key == KEY_HOME && time == PANEL_LONG_PRESS) {
     if(main_current_screen == MAIN_SCREEN_HOME && !Display.isScrolling()){
-      Display.printScroll(F("    FELIZ DIA DO PROGRAMADOR    "));
+      Display.setTimeSeparator(false);
+      Display.printEnd(F("*__*")); delay(750);
+      Display.printEnd(F("-__-")); delay(150);
+      Display.printEnd(F("*__*")); delay(500);
+      Display.printEnd(F("-__-")); delay(500);
+      Display.clear();
+      delay(250);
+
+      sleep();
+
+      Display.printEnd(F("-__-")); delay(750);
+      Display.printEnd(F("*__*")); delay(250);
+      Display.printEnd(F("-__-")); delay(150);
+      Display.printEnd(F("*__*")); delay(500);
+      Display.printEnd(F("*__-")); delay(500);
+      Display.printEnd(F("*__*")); delay(500);
+      
     }
     else {
       main_screen_destroy();
+      main_current_screen = MAIN_SCREEN_HOME;
+      main_cursor = 0;
+
       Display.clearScroll();
       Display.setCursor(0);
       Display.print(F("----"));
@@ -351,20 +435,22 @@ void onKeyPress(InputKey key, unsigned int milliseconds){
 void onKeyUp(InputKey key, unsigned int milliseconds){
   int time = milliseconds / PANEL_INTERVAL;
 
+  if(debug_mode){
+    Serial.print(F("onKeyUp: Key "));
+    Serial.print((int) key);
+    Serial.print(F(", "));
+    Serial.print((int) milliseconds);
+    Serial.println(F("ms"));
+  }
+
   if(time >= PANEL_LONG_PRESS) return;
 
   if(Display.isScrolling() || (main_current_screen == MAIN_SCREEN_HOME && main_cursor == 0)) {
     if(key == KEY_HOME){
+      main_screen_destroy();
       increment(main_current_screen, MAIN_SCREEN_FIRST, MAIN_SCREEN_LAST, true);
-      print_current_screen_name();
 
-      if(main_current_screen != MAIN_SCREEN_HOME)
-        main_cursor = 0;
-
-      if(main_current_screen == MAIN_SCREEN_ADJUST_TIME) 
-        screen_adjust_time__initialize();
-      else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
-        screen_adjust_rtc_fix__initialize();
+      main_screen_initialize();
     }
     return;
   }
@@ -378,6 +464,8 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
     }
 
     main_screen_destroy();
+    main_current_screen = MAIN_SCREEN_HOME;
+    main_cursor = 0;
     return;
   }
 
@@ -386,14 +474,23 @@ void onKeyUp(InputKey key, unsigned int milliseconds){
   }
 }
 
+void main_screen_initialize(){
+  print_current_screen_name();
+
+  if(main_current_screen != MAIN_SCREEN_HOME)
+    main_cursor = 0;
+
+  if(main_current_screen == MAIN_SCREEN_ADJUST_TIME) 
+    screen_adjust_time__initialize();
+  else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
+    screen_adjust_rtc_fix__initialize();
+}
+
 void main_screen_destroy(){
   if(main_current_screen == MAIN_SCREEN_ADJUST_TIME)
     screen_adjust_time__destroy();
   else if(main_current_screen == MAIN_SCREEN_ADJUST_RTC_FIX)
     screen_adjust_rtc_fix__destroy();
-  
-  main_current_screen = MAIN_SCREEN_HOME;
-  main_cursor = 0;
 }
 
 void print_current_screen_name(){
@@ -538,8 +635,8 @@ void thr_main_func() {
   Display.setTimeSeparator(false);
 
   long m = millis();
-  bool idle = ir.isIdle(1000) && panel.isIdle(1000);
-  main_cursor_blink = ir.isIdle(500) && panel.isIdle(500);
+  bool idle = ir.isIdle(2000) && panel.isIdle(2000);
+  main_cursor_blink = ir.isIdle(500) && panel.isIdle(1000);
   
   switch(main_current_screen){
     case MAIN_SCREEN_HOME:
@@ -565,7 +662,7 @@ void thr_main_func() {
       
       // Hours and Minutes
       else {                          // Runs when others 'IFs' are false
-        Display.setTimeSeparator(true);
+        Display.setTimeSeparator(thr_rtc.enabled);
         Display.setCursor(0);
         
         if(rtc_now.hour() < 10)
