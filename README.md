@@ -1,6 +1,6 @@
 # White Led Digital Clock
 
-This is a digital led clock made based on arduino uno microcontroller.
+A digital clock made by scratch. Initially built with cardboard, it was re-assembled with 3D-printed parts. It also received hardware and software improvements. Its based on Arduino UNO microcontroller, assembled in a custom standalone PCB.
 
 |                                                                                                               |                                                                                                               |
 | :-----------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------: |
