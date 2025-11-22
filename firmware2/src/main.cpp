@@ -1,16 +1,36 @@
-#include "drivers/display.hpp"
-#include "view/home.hpp"
+/*
+ * (c) DaviApps 2025
+ * 
+ * White LED Digital Clock 
+ * 
+ * description: This is the firmware of a led digital clock (7 segments)
+ * author: https://github.com/daviinacio
+ * date: 22/11/2025
+ * 
+ */
 
+#include "Arduino.h"
 
-HomeScreen home_screen();
+// #include "drivers/Display.hpp"
+#include "lib/ScreenController.h"
+#include "view/HomeScreen.hpp"
+#include "view/ChronometerScreen.hpp"
+
+ScreenController scr_ctrl;
+
+HomeScreen scr_home = HomeScreen();
+ChronometerScreen scr_chronometer = ChronometerScreen();
 
 void setup() {
-  Display.begin();
-  // put your setup code here, to run once:
+  Serial.begin(9600);
+  Serial.println("Firmware 2.0");
 
+  scr_ctrl.add(&scr_home);
+  scr_ctrl.add(&scr_chronometer);
+
+  scr_ctrl.navigate(SCREEN_HOME);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
+  scr_ctrl.run();
 }

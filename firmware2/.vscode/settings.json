@@ -1,4 +1,15 @@
 {
+  "files.exclude": {
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/CVS": true,
+    "**/node_modules": true,
+    ".vscode": true,
+    ".pio": true
+  },
   "cSpell.words": [
     "ATMEGA",
     "COMPA",
@@ -7,6 +18,7 @@
     "OCIE",
     "PORTB",
     "PORTD",
+    "runned",
     "TCCR",
     "TIMSK",
     "vect",

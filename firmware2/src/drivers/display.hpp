@@ -93,7 +93,7 @@ protected:
   unsigned short decimal_position = 0;
   unsigned short cursor = 0;
 
-   char* scroll_content;
+  char scroll_content[32];
   unsigned int scroll_cursor = 0;
   bool scroll_forward = true;
 
@@ -146,7 +146,7 @@ public:
 DisplayDriver::DisplayDriver(){
   time_separator = false;
   scroll_cursor = 0;
-  scroll_content = "";
+  strcpy(scroll_content, "");
   scroll_forward = true;
   enabled = false;
   setInterval(DISP_DEFAULT_SCROLL_INTERVAL);
@@ -159,7 +159,7 @@ void DisplayDriver::run(){
   if(scroll_cursor > (scroll_content_length - DISP_LENGTH)){
     enabled = false;
     scroll_cursor++;
-    scroll_content = "";
+    strcpy(scroll_content, "");
     return;
   }
 
@@ -200,7 +200,7 @@ void DisplayDriver::print(char c){
 }
 
 void DisplayDriver::print(char* c){
-  for(int i = 0; i < strlen(c) && cursor < DISP_LENGTH; i++)
+  for(size_t i = 0; i < strlen(c) && cursor < DISP_LENGTH; i++)
     print(c[i]);
 }
 
@@ -223,8 +223,6 @@ void DisplayDriver::print(unsigned short num){
 void DisplayDriver::print(double decimal, int fractionDigits){
   int num = (int) decimal;
   unsigned int places = round((decimal - num) * pow(10, fractionDigits));
-  // unsigned short places = modf(decimal);
-  // unsigned short places = round(fmod(decimal, 1) * pow(10, fractionDigits));
 
   char num_str [11] = "";
   char places_str [11] = "";
@@ -291,7 +289,7 @@ void DisplayDriver::printEnd(double decimal){
 
 void DisplayDriver::clearScroll(){
   scroll_cursor = 0;
-  scroll_content = "";
+  strcpy(scroll_content, "");
   scroll_forward = true;
   enabled = false;
 }
@@ -300,7 +298,7 @@ void DisplayDriver::printScroll(char* text, int _interval){
   time_separator = false;
   decimal_position = 0;
   scroll_cursor = 0;
-  scroll_content = text;
+  strcpy(scroll_content, text);
   scroll_forward = true;
   enabled = true;
   setInterval(_interval);
@@ -310,11 +308,14 @@ void DisplayDriver::printScroll(char* text){
   printScroll(text, DISP_DEFAULT_SCROLL_INTERVAL);
 }
 
-void DisplayDriver::printScroll(const __FlashStringHelper * text, int _interval){
+void DisplayDriver::printScroll(const __FlashStringHelper* text, int _interval) {
   time_separator = false;
   decimal_position = 0;
   scroll_cursor = 0;
-  strncpy_P(scroll_content, (char*)text, 32);
+
+  const char* flashPtr = reinterpret_cast<const char*>(text);
+  strncpy_P(scroll_content, flashPtr, 32);
+
   scroll_forward = true;
   enabled = true;
   setInterval(_interval);
@@ -328,7 +329,7 @@ void DisplayDriver::printScrollReverse(char* text, int _interval){
   time_separator = false;
   decimal_position = 0;
   scroll_cursor = 0;
-  scroll_content = text;
+  strcpy(scroll_content, text);
   scroll_forward = false;
   enabled = true;
   setInterval(_interval);
@@ -441,7 +442,7 @@ void DisplayDriver::run_multiplex(){
     PORTB ^= 0b00111100;                          // Toggle pins PB2, PB3, PB4, PB5 to LOW
   
     // Active the current digit of display
-    PORTB ^= (1 << DISP_PIN_FIRST + multiplex_digit);  // Toggle the current digit pin to HIGH
+    PORTB ^= (1 << (DISP_PIN_FIRST + multiplex_digit));  // Toggle the current digit pin to HIGH
   
     // Set display content
     PORTD ^= content[multiplex_digit];                 // Sets the display content and uses ^= to invert the bits
