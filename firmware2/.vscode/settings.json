@@ -1,0 +1,16 @@
+{
+  "cSpell.words": [
+    "ATMEGA",
+    "COMPA",
+    "DDRB",
+    "DDRD",
+    "OCIE",
+    "PORTB",
+    "PORTD",
+    "TCCR",
+    "TIMSK",
+    "vect",
+    "WLDC"
+  ],
+  "C_Cpp.errorSquiggles": "enabled"
+}
