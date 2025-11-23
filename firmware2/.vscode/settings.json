@@ -7,8 +7,7 @@
     "**/Thumbs.db": true,
     "**/CVS": true,
     "**/node_modules": true,
-    ".vscode": true,
-    ".pio": true
+    ".vscode": true
   },
   "cSpell.words": [
     "ATMEGA",

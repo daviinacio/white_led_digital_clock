@@ -9,28 +9,48 @@
  * 
  */
 
+#define WLDC_DISPLAY_DEBUG_MODE false
+
 #include "Arduino.h"
 
-// #include "drivers/Display.hpp"
+// Drivers
+#include "drivers/Display.hpp"
+#include "drivers/RTC.hpp"
+
+// Core
 #include "lib/ScreenController.h"
+
+// Screens
 #include "view/HomeScreen.hpp"
 #include "view/ChronometerScreen.hpp"
 
-ScreenController scr_ctrl;
+ThreadController cpu;
+ScreenController screen_controller;
 
-HomeScreen scr_home = HomeScreen();
-ChronometerScreen scr_chronometer = ChronometerScreen();
+HomeScreen scr_home;
+ChronometerScreen scr_chronometer;
 
 void setup() {
-  Serial.begin(9600);
-  Serial.println("Firmware 2.0");
+  // Hardware Threads
+  cpu.add(&Display);
+  cpu.add(&RTC);
 
-  scr_ctrl.add(&scr_home);
-  scr_ctrl.add(&scr_chronometer);
+  // Screen Threads
+  screen_controller.add(&scr_home);
+  screen_controller.add(&scr_chronometer);
+  cpu.add(&screen_controller);
 
-  scr_ctrl.navigate(SCREEN_HOME);
+  // Driver Begins
+  RTC.begin();
+  Display.begin();
+
+  // Boot screen
+  Display.print(F("DAVI"));
+  screen_controller.navigate(SCREEN_HOME);
+
+  delay(1000);
 }
 
 void loop() {
-  scr_ctrl.run();
+  cpu.run();
 }

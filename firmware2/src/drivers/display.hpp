@@ -1,17 +1,44 @@
 #include "Arduino.h"
 #include <avr/io.h>
+#include <Thread.h>
+
+#ifndef WLDC_DISPLAY_DEBUG_MODE
+#define WLDC_DISPLAY_DEBUG_MODE false
+#endif
+
+#ifndef WLDC_DISPLAY_DEBUG_WATCH_ALL
+#define WLDC_DISPLAY_DEBUG_WATCH_ALL false
+#endif
+
+#ifndef WLDC_DISPLAY_SEGMENT_PORT
+#define WLDC_DISPLAY_SEGMENT_PORT PORTD
+#endif
+
+#ifndef WLDC_DISPLAY_SEGMENT_DDR
+#define WLDC_DISPLAY_SEGMENT_DDR DDRD
+#endif
+
+#ifndef WLDC_DISPLAY_DIGIT_PORT
+#define WLDC_DISPLAY_DIGIT_PORT PORTB
+#endif
+
+#ifndef WLDC_DISPLAY_DIGIT_DDR
+#define WLDC_DISPLAY_DIGIT_DDR DDRB
+#endif
 
 #ifndef WLDC_DISPLAY_DRIVER_H
 #define WLDC_DISPLAY_DRIVER_H
-#include <Thread.h>
 
 #define DISP_LENGTH 4
-#define DISP_PIN_FIRST PB2
-#define DISP_PIN_LAST PB5
+// #define DISP_PIN_FIRST PB2
+// #define DISP_PIN_LAST PB5
 #define DISP_BR_MIN 1
 #define DISP_BR_MAX 64
 #define DISP_DEFAULT_SCROLL_INTERVAL 200
 #define DISP_DEFAULT_FRACTION_DIGITS 2
+
+#define GET_DIGIT_PIN_BIT(index) ({ const uint8_t map[DISP_LENGTH] = { PB2, PB3, PB4, PB5 }; map[index]; })
+
 
 // Binary data
 const byte seven_seg_ascii_init = ' '; // First mapped ASCII position
@@ -189,13 +216,27 @@ void DisplayDriver::setCursor(unsigned short col){
 void DisplayDriver::clear(){
   for(int i = 0; i < DISP_LENGTH; i++)
     content[i] = 0x00;
+
+  if(WLDC_DISPLAY_DEBUG_MODE && WLDC_DISPLAY_DEBUG_WATCH_ALL){
+    Serial.println((char*) content);
+  }
 }
 
 void DisplayDriver::print(char c){
   decimal_position = 0;
   
   c = toupper(c);
-  content[cursor] = (char) pgm_read_word(&(seven_seg_asciis[((int) c) - seven_seg_ascii_init]));
+
+  if(WLDC_DISPLAY_DEBUG_MODE){
+    content[cursor] = c;
+
+    if((WLDC_DISPLAY_DEBUG_WATCH_ALL || cursor == DISP_LENGTH -1))
+      Serial.println((char*) content);
+  }
+  else {
+    content[cursor] = (char) pgm_read_word(&(seven_seg_asciis[((int) c) - seven_seg_ascii_init]));
+  }
+  
   cursor++;
 }
 
@@ -391,22 +432,27 @@ bool DisplayDriver::isScrolling(){
 
 // Low level implementation
 void DisplayDriver::begin(){
+  if(WLDC_DISPLAY_DEBUG_MODE){
+    Serial.begin(9600);
+    return;
+  }
+
    // PinMode display digits pins
-  DDRD = 0xff;                    // Set all PortD pins to output (0 - 7)
-  PORTD = 0xff;                   // Set all PortD pins to HIGH
+  WLDC_DISPLAY_SEGMENT_DDR = 0xff;                    // Set all PortD pins to output (0 - 7)
+  WLDC_DISPLAY_SEGMENT_PORT = 0xff;                   // Set all PortD pins to HIGH
 
   // PinMode display select pins
-  DDRB = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
-  PORTB = B00111110;              // Set all PortB pins to HIGH
+  WLDC_DISPLAY_DIGIT_DDR = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
+  WLDC_DISPLAY_DIGIT_PORT = B00111110;              // Set all PortB pins to HIGH
 
   delay(50);
-  PORTB = B00111100;
+  WLDC_DISPLAY_DIGIT_PORT = B00111100;
   delay(50);
-  PORTB = B00111110;
+  WLDC_DISPLAY_DIGIT_PORT = B00111110;
   delay(100);
 
-  PORTD = 0x00;                   // Set all PortD pins to LOW 
-  PORTB = 0x00;                   // Set all PortB pins to LOW
+  WLDC_DISPLAY_SEGMENT_PORT = 0x00;                   // Set all PortD pins to LOW 
+  WLDC_DISPLAY_DIGIT_PORT = 0x00;                   // Set all PortB pins to LOW
 
   /*    *    ATMEGA TIMER2    *    */
   
@@ -421,6 +467,13 @@ void DisplayDriver::begin(){
   // Initialize Registers
   TCNT2  = 0;
   OCR2A = 100;
+
+  if(WLDC_DISPLAY_DEBUG_MODE) {
+    disable();
+  }
+  else {
+    enable();
+  }
 }
 
 void DisplayDriver::enable(){
@@ -429,32 +482,32 @@ void DisplayDriver::enable(){
 
 void DisplayDriver::disable(){
   TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
-  PORTD = 0x00;             // Clean display pins
+  WLDC_DISPLAY_SEGMENT_PORT = 0x00;             // Clean display pins
 }
 
 void DisplayDriver::run_multiplex(){
   // Clean display
-  PORTD = 0x00;                                   // Sets all PORTD pins to LOW
+  WLDC_DISPLAY_SEGMENT_PORT = 0x00;                                   // Sets all PortD pins to LOW
 
   // Brightness control
   if((multiplex_count/DISP_LENGTH) < brightness){
-    PORTB |= 0b00111100;                          // Puts pins PB2, PB3, PB4, PB5 to HIGH
-    PORTB ^= 0b00111100;                          // Toggle pins PB2, PB3, PB4, PB5 to LOW
+    WLDC_DISPLAY_DIGIT_PORT |= 0b00111100;                          // Puts pins PB2, PB3, PB4, PB5 to HIGH
+    WLDC_DISPLAY_DIGIT_PORT ^= 0b00111100;                          // Toggle pins PB2, PB3, PB4, PB5 to LOW
   
     // Active the current digit of display
-    PORTB ^= (1 << (DISP_PIN_FIRST + multiplex_digit));  // Toggle the current digit pin to HIGH
+    WLDC_DISPLAY_DIGIT_PORT ^= (1 << GET_DIGIT_PIN_BIT(multiplex_digit));  // Toggle the current digit pin to HIGH
   
     // Set display content
-    PORTD ^= content[multiplex_digit];                 // Sets the display content and uses ^= to invert the bits
+    WLDC_DISPLAY_SEGMENT_PORT ^= content[multiplex_digit];                 // Sets the display content and uses ^= to invert the bits
                                                   // (the display actives with LOW state)
     
     // Set time marker
     if(time_separator && multiplex_digit == DISP_LENGTH -1)
-      PORTD ^= (1 << 0);
+      WLDC_DISPLAY_SEGMENT_PORT ^= (1 << 0);
 
     // Set decimal position
     if(decimal_position == multiplex_digit + 1 && decimal_position <= 3) {
-      PORTD ^= (1 << 0);
+      WLDC_DISPLAY_SEGMENT_PORT ^= (1 << 0);
     }
   }
 

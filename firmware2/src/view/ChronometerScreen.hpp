@@ -1,4 +1,4 @@
-#include "_def.h"
+#include "_define.h"
 #include "../lib/Screen.h"
 #include "../drivers/Display.hpp"
 
@@ -12,31 +12,21 @@ public:
   }
 
   void onStart() override {
-    Serial.println("ChronometerScreen.onStart");
-
+    Display.setCursor(0);
+    Display.print(F("C 01"));
   }
 
   void onRender() override {
-    Serial.println("ChronometerScreen.onRender");
+    Display.setCursor(0);
+    Display.print(F("C 02"));
 
     if(millis() / 5000 % 2 == 0)
       navigate(SCREEN_HOME);
   }
 
   void onStop() override {
-    Serial.println("ChronometerScreen.onStop");
-  }
-
-  void onKeyDown() override {
-    Serial.println("ChronometerScreen.onKeyDown");
-  }
-
-  void onKeyPress() override {
-    Serial.println("ChronometerScreen.onKeyPress");
-  }
-
-  void onKeyUp() override {
-    Serial.println("ChronometerScreen.onKeyUp"); 
+    Display.setCursor(0);
+    Display.print(F("C 03"));
   }
 };
 

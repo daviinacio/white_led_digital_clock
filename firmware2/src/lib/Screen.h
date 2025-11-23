@@ -18,9 +18,9 @@ public:
   virtual ~Screen() {}
   Screen();
   
-  virtual void onStart() = 0;
+  virtual void onStart() {};
   virtual void onRender() = 0;
-  virtual void onStop() = 0;
+  virtual void onStop() {};
 
   virtual void onKeyDown(){};
   virtual void onKeyPress(){};
