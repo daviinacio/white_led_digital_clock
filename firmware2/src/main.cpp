@@ -16,6 +16,7 @@
 // Drivers
 #include "drivers/Display.hpp"
 #include "drivers/RTC.hpp"
+#include "drivers/DHT.hpp"
 
 // Core
 #include "lib/ScreenController.h"
@@ -32,8 +33,9 @@ ChronometerScreen scr_chronometer;
 
 void setup() {
   // Hardware Threads
-  cpu.add(&Display);
-  cpu.add(&RTC);
+  cpu.add(&display);
+  cpu.add(&rtc);
+  cpu.add(&dht);
 
   // Screen Threads
   screen_controller.add(&scr_home);
@@ -41,11 +43,13 @@ void setup() {
   cpu.add(&screen_controller);
 
   // Driver Begins
-  RTC.begin();
-  Display.begin();
+  display.begin();
+  rtc.begin();
+  dht.begin();
+  //dht.setInterval(4000);
 
   // Boot screen
-  Display.print(F("DAVI"));
+  display.print(F("DAVI"));
   screen_controller.navigate(SCREEN_HOME);
 
   delay(1000);

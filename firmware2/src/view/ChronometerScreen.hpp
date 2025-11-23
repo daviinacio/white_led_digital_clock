@@ -12,21 +12,21 @@ public:
   }
 
   void onStart() override {
-    Display.setCursor(0);
-    Display.print(F("C 01"));
+    display.setCursor(0);
+    display.print(F("C 01"));
   }
 
   void onRender() override {
-    Display.setCursor(0);
-    Display.print(F("C 02"));
+    display.setCursor(0);
+    display.print(F("C 02"));
 
     if(millis() / 5000 % 2 == 0)
       navigate(SCREEN_HOME);
   }
 
   void onStop() override {
-    Display.setCursor(0);
-    Display.print(F("C 03"));
+    display.setCursor(0);
+    display.print(F("C 03"));
   }
 };
 

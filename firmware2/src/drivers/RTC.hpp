@@ -27,10 +27,10 @@ void RealTimeClockDriver::begin(){
   while(!rtc.begin()){
     // Blink error for five seconds
     if(millis()/500 % 3 >= 1){
-      Display.setCursor(0);
-      Display.print(F("ERRO"));
+      display.setCursor(0);
+      display.print(F("ERRO"));
     } else {
-      Display.clear();
+      display.clear();
     }
   }
 }
@@ -39,6 +39,6 @@ void RealTimeClockDriver::run(){
   now = rtc.now();
 }
 
-RealTimeClockDriver RTC;
+RealTimeClockDriver rtc;
 
 #endif

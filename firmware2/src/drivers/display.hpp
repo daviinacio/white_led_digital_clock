@@ -477,6 +477,7 @@ void DisplayDriver::begin(){
 }
 
 void DisplayDriver::enable(){
+  if(WLDC_DISPLAY_DEBUG_MODE) return;
   TIMSK2 |= (1 << OCIE2A); // enable timer compare interrupt
 }
 
@@ -521,11 +522,11 @@ void DisplayDriver::run_multiplex(){
 }
 
 // Global display instance
-DisplayDriver Display = DisplayDriver();
+DisplayDriver display = DisplayDriver();
 
 // TIMER2 Interrupt
 ISR(TIMER2_COMPA_vect){
-  Display.run_multiplex();
+  display.run_multiplex();
 }
 
 #endif

@@ -11,12 +11,15 @@ class Screen : public Thread
 {
 protected:
   ScreenController* controller = nullptr;
-
   void navigate(int screen_id);
+
+  bool isInputIdle = true;
 
 public:
   virtual ~Screen() {}
   Screen();
+
+  void attachController(ScreenController* c);
   
   virtual void onStart() {};
   virtual void onRender() = 0;
@@ -27,8 +30,6 @@ public:
   virtual void onKeyUp(){};
 
   void run();
-
-  void attachController(ScreenController* c);
 };
 
 #endif
