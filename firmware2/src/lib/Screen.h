@@ -1,35 +1,47 @@
 #include <Thread.h>
 #include "ScreenController.h"
+#include "Input.hpp"
 
 #ifndef WLDC_SCREEN_CLASS_H
 #define WLDC_SCREEN_CLASS_H
 
 class ScreenController;
 
-// template <typename T>
-class Screen : public Thread
-{
+using ScreenID = uint8_t;
+
+class ScreenBase : public Thread, public InputListener {
 protected:
   ScreenController* controller = nullptr;
-  void navigate(int screen_id);
+  void navigate(ScreenID screen_id);
 
-  bool isInputIdle = true;
+  template <typename T>
+  void navigate() {
+      navigate(T::Id);
+  }
+
+  bool isIdle = true;
 
 public:
-  virtual ~Screen() {}
-  Screen();
-
-  void attachController(ScreenController* c);
-  
   virtual void onStart() {};
   virtual void onRender() = 0;
   virtual void onStop() {};
 
-  virtual void onKeyDown(){};
-  virtual void onKeyPress(){};
-  virtual void onKeyUp(){};
-
+  void attachController(ScreenController* c);
   void run();
+};
+
+template <typename ST>
+class Screen : public ScreenBase
+{
+public:
+  static constexpr ScreenID kID = ST::Id;
+  ScreenID id;
+
+  virtual ~Screen() {}
+  Screen() : id(kID) {
+    interval = 500;
+    ThreadID = id;
+  }
 };
 
 #endif

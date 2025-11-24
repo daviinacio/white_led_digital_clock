@@ -1,3 +1,5 @@
+#include "../lib/Input.hpp"
+
 #ifndef WLDC_SCREEN_CONTROLLER_CLASS_H
 #define WLDC_SCREEN_CONTROLLER_CLASS_H
 
@@ -6,13 +8,23 @@
 #include "Screen.h"
 #include <ThreadController.h>
 
-class ScreenController : public ThreadController {
+class ScreenController : public ThreadController, public InputListener {
 protected:
-  unsigned short _active_screen_index = MAX_THREADS;
+  static ScreenController* instance;
+  ScreenBase* activeScreen = nullptr;
 
 public:
-  bool add(Screen* _screen);
-  void navigate(int screen_id);
+  void onKeyPress(InputKey key, unsigned int milliseconds) override;
+  void onKeyUp(InputKey key, unsigned int milliseconds) override;
+  bool onKeyDown(InputKey key) override;
+
+  bool add(ScreenBase* _screen);
+  void navigate(ScreenID screen_id);
+  
+  template <typename T>
+  void navigate() {
+      navigate(T::Id);
+  }
 };
 
 

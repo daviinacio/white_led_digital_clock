@@ -1,24 +1,41 @@
 #include "ScreenController.h"
 
-bool ScreenController::add(Screen* _screen){
+// ScreenController::ScreenController(){
+//   instance = this;
+// }
+
+void ScreenController::onKeyPress(InputKey key, unsigned int milliseconds) {
+  if(activeScreen)
+    activeScreen->onKeyPress(key, milliseconds);
+}
+
+void ScreenController::onKeyUp(InputKey key, unsigned int milliseconds) {
+  if(activeScreen)
+    activeScreen->onKeyPress(key, milliseconds);
+}
+
+bool ScreenController::onKeyDown(InputKey key) {
+  if(activeScreen)
+    return activeScreen->onKeyDown(key);
+  return false;
+}
+
+bool ScreenController::add(ScreenBase *_screen)
+{
   _screen->enabled = false;
   _screen->attachController(this);
   return ThreadController::add(_screen);
 }
 
-void ScreenController::navigate(int screen_id){
-    if(_active_screen_index != MAX_THREADS)
-      ((Screen*) thread[_active_screen_index])->onStop();
+void ScreenController::navigate(ScreenID screen_id){
+  if(activeScreen) activeScreen->onStop();
 
-    int checks = 0;
-    for(int i = 0; i < MAX_THREADS && checks <= cached_size; i++){
-      if(thread[i]){
-        checks++;
-        thread[i]->enabled = thread[i]->ThreadID == screen_id;
-        if(thread[i]->enabled)
-          _active_screen_index = i;
-      }
-    }
-
-    ((Screen*) thread[_active_screen_index])->onStart();
+  for(Thread* thr : thread){
+    if(!thr) continue;
+    thr->enabled = thr->ThreadID == screen_id;
+    if(thr->enabled)
+      activeScreen = (ScreenBase*) thr;
   }
+
+  if(activeScreen) activeScreen->onStart();
+}

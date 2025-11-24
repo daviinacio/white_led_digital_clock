@@ -1,20 +1,17 @@
 #include "Screen.h"
 #include "ScreenController.h"
+#include "screen.h"
 
-Screen::Screen(){
-  interval = 500;
+void ScreenBase::attachController(ScreenController *c){
+  controller = c;
 }
 
-void Screen::navigate(int screen_id){
-  if (controller)
-    controller->navigate(screen_id);
-}
-
-void Screen::attachController(ScreenController* c) {
-    controller = c;
-}
-
-void Screen::run(){
+void ScreenBase::run() {
   onRender();
   runned();
+}
+
+void ScreenBase::navigate(ScreenID screen_id) {
+  if (controller)
+      controller->navigate(screen_id);
 }

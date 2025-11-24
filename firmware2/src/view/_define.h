@@ -1,2 +1,0 @@
-#define SCREEN_HOME 0x01
-#define SCREEN_CHRONOMETER 0x02

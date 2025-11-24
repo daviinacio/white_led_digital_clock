@@ -217,9 +217,9 @@ void DisplayDriver::clear(){
   for(int i = 0; i < DISP_LENGTH; i++)
     content[i] = 0x00;
 
-  if(WLDC_DISPLAY_DEBUG_MODE && WLDC_DISPLAY_DEBUG_WATCH_ALL){
+  #if WLDC_DISPLAY_DEBUG_MODE && WLDC_DISPLAY_DEBUG_WATCH_ALL
     Serial.println((char*) content);
-  }
+  #endif
 }
 
 void DisplayDriver::print(char c){
@@ -227,15 +227,14 @@ void DisplayDriver::print(char c){
   
   c = toupper(c);
 
-  if(WLDC_DISPLAY_DEBUG_MODE){
+  #if WLDC_DISPLAY_DEBUG_MODE
     content[cursor] = c;
 
     if((WLDC_DISPLAY_DEBUG_WATCH_ALL || cursor == DISP_LENGTH -1))
       Serial.println((char*) content);
-  }
-  else {
+  #else
     content[cursor] = (char) pgm_read_word(&(seven_seg_asciis[((int) c) - seven_seg_ascii_init]));
-  }
+  #endif
   
   cursor++;
 }
@@ -432,10 +431,10 @@ bool DisplayDriver::isScrolling(){
 
 // Low level implementation
 void DisplayDriver::begin(){
-  if(WLDC_DISPLAY_DEBUG_MODE){
+  #if WLDC_DISPLAY_DEBUG_MODE
     Serial.begin(9600);
     return;
-  }
+  #endif
 
    // PinMode display digits pins
   WLDC_DISPLAY_SEGMENT_DDR = 0xff;                    // Set all PortD pins to output (0 - 7)

@@ -9,14 +9,17 @@
  * 
  */
 
-#define WLDC_DISPLAY_DEBUG_MODE false
-
+#include "config.hpp"
 #include "Arduino.h"
 
 // Drivers
 #include "drivers/Display.hpp"
 #include "drivers/RTC.hpp"
 #include "drivers/DHT.hpp"
+#include "drivers/Panel.hpp"
+
+// Hardware
+AnalogPanel panel = AnalogPanel(A3, 100);
 
 // Core
 #include "lib/ScreenController.h"
@@ -24,35 +27,40 @@
 // Screens
 #include "view/HomeScreen.hpp"
 #include "view/ChronometerScreen.hpp"
+#include "view/AdjustClockScreen.hpp"
 
 ThreadController cpu;
 ScreenController screen_controller;
 
-HomeScreen scr_home;
-ChronometerScreen scr_chronometer;
+HomeScreen screen_home;
+ChronometerScreen screen_chronometer;
+AdjustClockScreen screen_adjust_clock;
 
 void setup() {
   // Hardware Threads
   cpu.add(&display);
   cpu.add(&rtc);
   cpu.add(&dht);
+  cpu.add(&panel);
 
   // Screen Threads
-  screen_controller.add(&scr_home);
-  screen_controller.add(&scr_chronometer);
+  screen_controller.add(&screen_home);
+  screen_controller.add(&screen_chronometer);
+  screen_controller.add(&screen_adjust_clock);
   cpu.add(&screen_controller);
 
   // Driver Begins
   display.begin();
   rtc.begin();
   dht.begin();
-  //dht.setInterval(4000);
+
+  panel.addEventListener(&screen_controller);
 
   // Boot screen
-  display.print(F("DAVI"));
-  screen_controller.navigate(SCREEN_HOME);
+  display.print(WLDC_SPLASH_TEXT);
+  screen_controller.navigate<HomeScreen>();
 
-  delay(1000);
+  delay(WLDC_SETUP_DELAY);
 }
 
 void loop() {
