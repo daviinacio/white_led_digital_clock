@@ -4,7 +4,7 @@
 #include <DHT.h>
 
 #include "../lib/Buffer.hpp"
-#include "Display.hpp"
+#include "Display.h"
 
 #define DHT_INIT_VALUE -255
 #define DHT_PIN A0
@@ -50,7 +50,7 @@ public:
     if(hum_buffer.empty())  hum_buffer.fill((int) dht_hum_read);
     else                        hum_buffer.insert((int) dht_hum_read);
 
-    runned();
+    Thread::run();
   };
 
   int getTemperature(){

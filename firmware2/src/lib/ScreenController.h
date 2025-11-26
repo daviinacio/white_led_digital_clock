@@ -1,30 +1,34 @@
-#include "../lib/Input.hpp"
+#include "Input.hpp"
+#include "../drivers/Display.h"
 
 #ifndef WLDC_SCREEN_CONTROLLER_CLASS_H
 #define WLDC_SCREEN_CONTROLLER_CLASS_H
 
-#define MAX_THREADS		15
+#define MAX_SCREENS 7
 
 #include "Screen.h"
 #include <ThreadController.h>
 
-class ScreenController : public ThreadController, public InputListener {
+class ScreenController : public Thread, public InputListener {
 protected:
-  static ScreenController* instance;
-  ScreenBase* activeScreen = nullptr;
+  unsigned short activeScreenIndex = 0;
+  Screen* screens[MAX_SCREENS];
+
+  void run() override;
 
 public:
-  void onKeyPress(InputKey key, unsigned int milliseconds) override;
-  void onKeyUp(InputKey key, unsigned int milliseconds) override;
-  bool onKeyDown(InputKey key) override;
+  Screen* activeScreen = nullptr;
 
-  bool add(ScreenBase* _screen);
+  ScreenController();
+
+  void keyPress(InputKey key, unsigned int milliseconds) override;
+  void keyUp(InputKey key, unsigned int milliseconds) override;
+  bool keyDown(InputKey key) override;
+
+  bool add(Screen* _screen);
   void navigate(ScreenID screen_id);
-  
-  template <typename T>
-  void navigate() {
-      navigate(T::Id);
-  }
+
+  void attachInput(Input* _input) override;
 };
 
 

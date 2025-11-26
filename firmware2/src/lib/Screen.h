@@ -2,46 +2,34 @@
 #include "ScreenController.h"
 #include "Input.hpp"
 
+#define SCREEN_DEFAULT_INTERVAL 500
+
 #ifndef WLDC_SCREEN_CLASS_H
 #define WLDC_SCREEN_CLASS_H
 
 class ScreenController;
 
-using ScreenID = uint8_t;
+using ScreenID = unsigned short;
 
-class ScreenBase : public Thread, public InputListener {
-protected:
+class Screen : public InputListener {
+private:
   ScreenController* controller = nullptr;
+
+protected:
   void navigate(ScreenID screen_id);
-
-  template <typename T>
-  void navigate() {
-      navigate(T::Id);
-  }
-
-  bool isIdle = true;
-
+  
 public:
-  virtual void onStart() {};
-  virtual void onRender() = 0;
-  virtual void onStop() {};
+  ScreenID Id;
+  unsigned short render_interval = 0;
+
+  Screen(unsigned short _id);
+  Screen(unsigned short _id, unsigned short _render_interval);
+
+  virtual void start() {};
+  virtual void render() = 0;
+  virtual void stop() {};
 
   void attachController(ScreenController* c);
-  void run();
-};
-
-template <typename ST>
-class Screen : public ScreenBase
-{
-public:
-  static constexpr ScreenID kID = ST::Id;
-  ScreenID id;
-
-  virtual ~Screen() {}
-  Screen() : id(kID) {
-    interval = 500;
-    ThreadID = id;
-  }
 };
 
 #endif

@@ -1,174 +1,6 @@
-#include "Arduino.h"
-#include <avr/io.h>
-#include <Thread.h>
+#include "Display.h"
 
-#ifndef WLDC_DISPLAY_DEBUG_MODE
-#define WLDC_DISPLAY_DEBUG_MODE false
-#endif
-
-#ifndef WLDC_DISPLAY_DEBUG_WATCH_ALL
-#define WLDC_DISPLAY_DEBUG_WATCH_ALL false
-#endif
-
-#ifndef WLDC_DISPLAY_SEGMENT_PORT
-#define WLDC_DISPLAY_SEGMENT_PORT PORTD
-#endif
-
-#ifndef WLDC_DISPLAY_SEGMENT_DDR
-#define WLDC_DISPLAY_SEGMENT_DDR DDRD
-#endif
-
-#ifndef WLDC_DISPLAY_DIGIT_PORT
-#define WLDC_DISPLAY_DIGIT_PORT PORTB
-#endif
-
-#ifndef WLDC_DISPLAY_DIGIT_DDR
-#define WLDC_DISPLAY_DIGIT_DDR DDRB
-#endif
-
-#ifndef WLDC_DISPLAY_DRIVER_H
-#define WLDC_DISPLAY_DRIVER_H
-
-#define DISP_LENGTH 4
-// #define DISP_PIN_FIRST PB2
-// #define DISP_PIN_LAST PB5
-#define DISP_BR_MIN 1
-#define DISP_BR_MAX 64
-#define DISP_DEFAULT_SCROLL_INTERVAL 200
-#define DISP_DEFAULT_FRACTION_DIGITS 2
-
-#define GET_DIGIT_PIN_BIT(index) ({ const uint8_t map[DISP_LENGTH] = { PB2, PB3, PB4, PB5 }; map[index]; })
-
-
-// Binary data
-const byte seven_seg_ascii_init = ' '; // First mapped ASCII position
-
-const byte seven_seg_asciis [] PROGMEM = {
-  0b00000000,   // Space
-  0x00, 0x00,   // Unmapped characters
-  0x00, 0x00,   // Unmapped characters
-  0x00, 0x00,   // Unmapped characters
-  0x00, 0x00,   // Unmapped characters
-  0x00,         // Unmapped characters
-  
-  0b11000110,   // * represents °
-  0x00,         // Unmapped characters
-  0b00001000,   // ,
-  0b00000010,   // -
-  0b00100000,   // .
-  0b01001010,   // /
-  
-  // Numbers
-  0b11111100,   // 0
-  0b01100000,   // 1
-  0b11011010,   // 2
-  0b11110010,   // 3
-  0b01100110,   // 4
-  0b10110110,   // 5
-  0b10111110,   // 6
-  0b11100000,   // 7
-  0b11111110,   // 8
-  0b11110110,   // 9
-  
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,   // Unmapped characters
-  
-  // Alphabetic characters 
-  0b11101110,   // A
-  0b00111110,   // B
-  0b10011100,   // C
-  0b01111010,   // D
-  0b10011110,   // E
-  0b10001110,   // F
-  0b11110110,   // G
-  0b01101110,   // H
-  0b00001100,   // I
-  0b01111000,   // J
-  0b00011110,   // K
-  0b00011100,   // L
-  0b10101010,   // M
-  0b00101010,   // N
-  0b00111010,   // O
-  0b11001110,   // P
-  0b11100110,   // Q
-  0b00001010,   // R
-  0b10110110,   // S
-  0b01100010,   // T
-  0b01111100,   // U
-  0b00111000,   // V
-  0b01010100,   // W
-  0b10010010,   // X
-  0b01110110,   // Y
-  0b11011010,   // Z
-
-  0b10011100,   // [
-  0b00100110,   // `\`
-  0b11110000,   // ]
-  0b10000000,   // ^
-  0b00010000,   // _
-};
-
-
-class DisplayDriver : public Thread {
-protected:
-  unsigned short brightness = DISP_BR_MAX / 2;
-
-  byte content [DISP_LENGTH];
-  unsigned short multiplex_count = 0;
-  unsigned short multiplex_digit = 0;
-  
-  bool time_separator = false;
-  unsigned short decimal_position = 0;
-  unsigned short cursor = 0;
-
-  char scroll_content[32];
-  unsigned int scroll_cursor = 0;
-  bool scroll_forward = true;
-
-public:
-  DisplayDriver();
-  void begin();
-  void run_multiplex();
-
-  void setBrightness(unsigned short _brightness);
-  void incrementBrightness();
-  void decrementBrightness();
-  void setTimeSeparator(bool _time_separator);
-
-  unsigned short getBrightness();
-
-  void setCursor(unsigned short _cursor);
-  void clear();
-  void print(char c);
-  void print(char* c);
-  void print(const __FlashStringHelper *);
-  void print(int num);
-  void print(unsigned short num);
-  void print(double decimal);
-  void print(double decimal, int fractionDigits);
-  void printEnd(char c);
-  void printEnd(char* c);
-  void printEnd(const __FlashStringHelper *);
-  void printEnd(int num);
-  void printEnd(unsigned short num);
-  void printEnd(double decimal);
-  void printEnd(double decimal, int fractionDigits);
-  void clearScroll();
-  void printScroll(char* text);
-  void printScroll(char* text, int _interval);
-  void printScroll(const __FlashStringHelper *);
-  void printScroll(const __FlashStringHelper *, int _interval);
-  void printScrollReverse(char* text);
-  void printScrollReverse(char* text, int _interval);
-  void printScrollReverse(const __FlashStringHelper *);
-  void printScrollReverse(const __FlashStringHelper *, int _interval);
-
-  bool isScrolling();
-
-  void run();
-  
-  void enable();
-  void disable();
-};
+DisplayDriver display; 
 
 DisplayDriver::DisplayDriver(){
   time_separator = false;
@@ -181,13 +13,13 @@ DisplayDriver::DisplayDriver(){
 
 // Run sub-threads
 void DisplayDriver::run(){
+  time_separator = false;
   size_t scroll_content_length = strlen(scroll_content);
   
   if(scroll_cursor > (scroll_content_length - DISP_LENGTH)){
     enabled = false;
-    scroll_cursor++;
     strcpy(scroll_content, "");
-    return;
+    return Thread::run();
   }
 
   clear();
@@ -195,15 +27,17 @@ void DisplayDriver::run(){
 
   // Slice the text to the length of the screen with scroll offset
   char slice_str [DISP_LENGTH] = { 0 };
+  const void * start_index = 0;
+
   if(scroll_forward)
-    memcpy(slice_str, &scroll_content[0] + scroll_cursor, DISP_LENGTH);
+    start_index = &scroll_content[0] + scroll_cursor;
   else 
-    memcpy(slice_str, &scroll_content[0] + scroll_content_length - scroll_cursor - DISP_LENGTH, DISP_LENGTH);
-  slice_str[DISP_LENGTH] = 0;
+    start_index = &scroll_content[0] + scroll_content_length - scroll_cursor - DISP_LENGTH;
+
+  memcpy(slice_str, start_index, DISP_LENGTH);
 
   scroll_cursor++;
   print(slice_str);
-
   Thread::run();
 }
 
@@ -223,19 +57,25 @@ void DisplayDriver::clear(){
 }
 
 void DisplayDriver::print(char c){
-  decimal_position = 0;
   
   c = toupper(c);
 
   #if WLDC_DISPLAY_DEBUG_MODE
     content[cursor] = c;
 
-    if((WLDC_DISPLAY_DEBUG_WATCH_ALL || cursor == DISP_LENGTH -1))
-      Serial.println((char*) content);
+    if((WLDC_DISPLAY_DEBUG_WATCH_ALL || cursor == DISP_LENGTH -1)){
+      for(size_t i = 0; i < DISP_LENGTH; i++) {
+        Serial.print(content[i] == 0x00 ? ' ' : (char) content[i]);
+        Serial.print(i == decimal_position -1 ? "." : " ");
+        if(i == 1) Serial.print(time_separator ? ": " : "  ");
+      }
+      Serial.println();
+    }
   #else
     content[cursor] = (char) pgm_read_word(&(seven_seg_asciis[((int) c) - seven_seg_ascii_init]));
   #endif
   
+  decimal_position = 0;
   cursor++;
 }
 
@@ -334,50 +174,50 @@ void DisplayDriver::clearScroll(){
   enabled = false;
 }
 
-void DisplayDriver::printScroll(char* text, int _interval){
-  time_separator = false;
+// void DisplayDriver::printScroll(char* text, int _interval){
+//   time_separator = false;
+//   decimal_position = 0;
+//   scroll_cursor = 0;
+//   strcpy(scroll_content, text);
+//   scroll_forward = true;
+//   enabled = true;
+//   setInterval(_interval);
+// }
+
+// void DisplayDriver::printScroll(char* text){
+//   printScroll(text, DISP_DEFAULT_SCROLL_INTERVAL);
+// }
+
+void DisplayDriver::printScroll(const __FlashStringHelper* text, int _interval) {
+  setTimeSeparator(false);
   decimal_position = 0;
   scroll_cursor = 0;
-  strcpy(scroll_content, text);
   scroll_forward = true;
   enabled = true;
   setInterval(_interval);
-}
-
-void DisplayDriver::printScroll(char* text){
-  printScroll(text, DISP_DEFAULT_SCROLL_INTERVAL);
-}
-
-void DisplayDriver::printScroll(const __FlashStringHelper* text, int _interval) {
-  time_separator = false;
-  decimal_position = 0;
-  scroll_cursor = 0;
 
   const char* flashPtr = reinterpret_cast<const char*>(text);
   strncpy_P(scroll_content, flashPtr, 32);
-
-  scroll_forward = true;
-  enabled = true;
-  setInterval(_interval);
 }
 
 void DisplayDriver::printScroll(const __FlashStringHelper * text){
   printScroll(text, DISP_DEFAULT_SCROLL_INTERVAL);
 }
 
-void DisplayDriver::printScrollReverse(char* text, int _interval){
-  time_separator = false;
-  decimal_position = 0;
-  scroll_cursor = 0;
-  strcpy(scroll_content, text);
-  scroll_forward = false;
-  enabled = true;
-  setInterval(_interval);
-}
+// void DisplayDriver::printScrollReverse(char* text, int _interval){
+//   setTimeSeparator(false);
+//   time_separator = false;
+//   decimal_position = 0;
+//   scroll_cursor = 0;
+//   strcpy(scroll_content, text);
+//   scroll_forward = false;
+//   enabled = true;
+//   setInterval(_interval);
+// }
 
-void DisplayDriver::printScrollReverse(char* text){
-  printScrollReverse(text, DISP_DEFAULT_SCROLL_INTERVAL);
-}
+// void DisplayDriver::printScrollReverse(char* text){
+//   printScrollReverse(text, DISP_DEFAULT_SCROLL_INTERVAL);
+// }
 
 void DisplayDriver::printScrollReverse(const __FlashStringHelper * text, int _interval){
   time_separator = false;
@@ -417,8 +257,10 @@ void DisplayDriver::decrementBrightness(){
 }
 
 void DisplayDriver::setTimeSeparator(bool _time_separator){
+  // Serial.print("DisplayDriver::setTimeSeparator ");
+  // Serial.println(_time_separator ? "true" : "false");
   time_separator = _time_separator;
-}
+} 
 
 unsigned short DisplayDriver::getBrightness(){
   return brightness;
@@ -520,12 +362,7 @@ void DisplayDriver::run_multiplex(){
   multiplex_count %= DISP_BR_MAX * DISP_LENGTH;
 }
 
-// Global display instance
-DisplayDriver display = DisplayDriver();
-
 // TIMER2 Interrupt
 ISR(TIMER2_COMPA_vect){
   display.run_multiplex();
 }
-
-#endif

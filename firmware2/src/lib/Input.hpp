@@ -12,149 +12,126 @@ enum InputKey {
   KEY_FUNC_RIGHT = 0x05,
 };
 
+class Input;
+
 class InputListener {
 public:
     virtual ~InputListener() {}
-    virtual void onKeyPress(InputKey key, unsigned int milliseconds){};
-    virtual void onKeyUp(InputKey key, unsigned int milliseconds){};
-    virtual bool onKeyDown(InputKey key){ return false; };
+    virtual void keyPress(InputKey key, unsigned int milliseconds){};
+    virtual void keyUp(InputKey key, unsigned int milliseconds){};
+    virtual bool keyDown(InputKey key){ return true; };
+
+    Input* input = nullptr;
+    virtual void attachInput(Input* _input){
+      input = _input;
+    };
 };
 
 class Input : public Thread {
-protected:
-  unsigned int pressing_miliseconds = 0;
-  InputKey last_key_pressed = KEY_DEFAULT;
-  virtual InputKey readInput() = 0;
-  virtual void handleEvents(InputKey key);
-
-  InputListener* listener = nullptr;
-  // bool (*_onKeyDown)(InputKey key);
-  // void (*_onKeyPress)(InputKey key, unsigned int milliseconds);
-  // void (*_onKeyUp)(InputKey key, unsigned int milliseconds);
-
 public:
-  Input(unsigned long _interval);
-  void run();
+  Input(unsigned long _interval, unsigned short _cooldown);
+  void run() override;
   bool shouldRun(unsigned long time);
-  // void onKeyDown(bool (*callback)(InputKey key));
-  // void onKeyPress(void (*callback)(InputKey key, unsigned int milliseconds));
-  // void onKeyUp(void (*callback)(InputKey key, unsigned int milliseconds));
+  void onKeyDown(bool (*callback)(InputKey key));
+  void onKeyPress(void (*callback)(InputKey key, unsigned int milliseconds));
+  void onKeyUp(void (*callback)(InputKey key, unsigned int milliseconds));
   bool isIdle(unsigned int milliseconds);
   void addEventListener(InputListener* _listener);
+protected:
+  unsigned long last_time_pressed;
+  InputKey last_key_pressed = InputKey::KEY_DEFAULT;
+  unsigned short cooldown;
+  virtual InputKey readInput() = 0;
+
+  InputListener* listener = nullptr;
+  bool (*_onKeyDown)(InputKey key);
+  void (*_onKeyPress)(InputKey key, unsigned int milliseconds);
+  void (*_onKeyUp)(InputKey key, unsigned int milliseconds);
+
+  void triggerKeyPress(InputKey key, unsigned int milliseconds);
+  void triggerKeyUp(InputKey key, unsigned int milliseconds);
+  bool triggerKeyDown(InputKey key);
 };
 
 // Implementation
-inline Input::Input(unsigned long _interval){
+inline Input::Input(unsigned long _interval, unsigned short _cooldown): Thread(NULL, _interval){
   enabled = false;
-  interval = _interval;
+  cooldown = _cooldown;
 }
 
-// inline void Input::onKeyDown(bool (*callback)(InputKey key)){
-//   _onKeyDown = callback;
-// }
+inline void Input::onKeyDown(bool (*callback)(InputKey key)){
+  _onKeyDown = callback;
+}
 
-// inline void Input::onKeyPress(void (*callback)(InputKey key, unsigned int milliseconds)){
-//   _onKeyPress = callback; 
-// }
+inline void Input::onKeyPress(void (*callback)(InputKey key, unsigned int milliseconds)){
+  _onKeyPress = callback; 
+}
 
-// inline void Input::onKeyUp(void (*callback)(InputKey key, unsigned int milliseconds)){
-//   _onKeyUp = callback; 
-// }
+inline void Input::onKeyUp(void (*callback)(InputKey key, unsigned int milliseconds)){
+  _onKeyUp = callback; 
+}
 
 inline bool Input::shouldRun(unsigned long time){
-  InputKey button = readInput();
-
-  if(button != KEY_DEFAULT){
-    if(!enabled){
-      // runned();
-      enabled = true;
-      return true;
+  InputKey key = readInput();
+  if(key == InputKey::KEY_DEFAULT){
+    enabled = false;
+    if(last_key_pressed != InputKey::KEY_DEFAULT){
+      triggerKeyUp(last_key_pressed, millis() - last_time_pressed);
+      last_key_pressed = InputKey::KEY_DEFAULT;
+      return false;
     }
   }
-  else if(enabled){
-    handleEvents(button);
-    runned();
+  else if(last_key_pressed == InputKey::KEY_DEFAULT){
+    bool validPress = triggerKeyDown(key);
+    last_time_pressed = millis();
+    if(validPress){
+      last_key_pressed = key;
+      enabled = true;
+      runned();
+      return false;
+    }
   }
-
   return Thread::shouldRun(time);
 }
 
-inline void Input::run()
-{
-  InputKey button = readInput();
-  handleEvents(button);
-  runned();
-}
-
-inline void Input::handleEvents(InputKey button){
-
-  // Kew Up
-  if(button == KEY_DEFAULT && last_key_pressed != KEY_DEFAULT) {
-    // if(_onKeyUp != NULL)
-    //   _onKeyUp(last_key_pressed, pressing_miliseconds);
-
-    if(listener)
-      listener->onKeyUp(last_key_pressed, pressing_miliseconds);
-    pressing_miliseconds = 0;
-  }
-  // Key Press
-  else if(button == last_key_pressed){
-    pressing_miliseconds += interval;
-    // if(_onKeyPress != NULL)
-    //   _onKeyPress(button, pressing_miliseconds);
-
-    if(listener) {
-      listener->onKeyPress(button, pressing_miliseconds);
-    }
-  }
-  // Key Down
-  else if(last_key_pressed == KEY_DEFAULT){
-    // if(_onKeyDown != NULL) {
-    //   if(!_onKeyDown(button)) {
-    //     // Bypass key down
-    //     button = KEY_DEFAULT;
-    //   }
-    // }
-
-    if(listener) {
-      if(!listener->onKeyDown(button)) {
-        // Bypass key down
-        button = KEY_DEFAULT;
-      }
-    }
-  }
-  // Changed Button
-  else {
-    // if(_onKeyUp != NULL)
-    //   _onKeyUp(last_key_pressed, pressing_miliseconds);
-    
-    if(listener)
-      listener->onKeyUp(last_key_pressed, pressing_miliseconds);
-
-    pressing_miliseconds = 0;
-
-    // if(_onKeyDown != NULL)
-    //   _onKeyDown(button);
-
-    if(listener) {
-      listener->onKeyDown(button);
-    }
-  }
-
-  last_key_pressed = button;
-
-  if(button == KEY_DEFAULT){
-    enabled = false;
-  }
+inline void Input::run(){
+  triggerKeyPress(last_key_pressed, millis() - last_time_pressed);
+  return Thread::run();
 }
 
 inline bool Input::isIdle(unsigned int milliseconds){
-  return (millis() - milliseconds) >= last_run;
+  return (millis() - last_run) >= milliseconds;
 }
 
-inline void Input::addEventListener(InputListener *_listener)
-{
+inline void Input::addEventListener(InputListener *_listener){
   this->listener = _listener;
+  _listener->attachInput(this);
+}
+
+inline void Input::triggerKeyPress(InputKey key, unsigned int milliseconds){
+  if(_onKeyPress != NULL)
+    _onKeyPress(key, milliseconds);
+
+  if(listener) {
+    listener->keyPress(key, milliseconds);
+  }
+}
+
+inline void Input::triggerKeyUp(InputKey key, unsigned int milliseconds){
+  if(_onKeyUp != NULL)
+    _onKeyUp(last_key_pressed, milliseconds);
+  
+  if(listener)
+    listener->keyUp(last_key_pressed, milliseconds);
+}
+
+inline bool Input::triggerKeyDown(InputKey key){
+  if(!((millis() - last_time_pressed) >= cooldown)) return false;
+
+  return (
+    ((_onKeyDown != NULL) ? _onKeyDown(key) : true) &&
+    (listener ? listener->keyDown(key) : true)
+  );
 }
 
 #endif
