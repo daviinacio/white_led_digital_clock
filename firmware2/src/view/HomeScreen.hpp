@@ -1,6 +1,6 @@
 class HomeScreen : public Screen {
 private:
-  unsigned short cursor = 0;
+  uint8_t cursor = 0;
 
 public:
   HomeScreen() : Screen(WLDC_SCREEN_HOME){}
@@ -18,7 +18,7 @@ public:
     if(m <= 2000){ /* Do nothing */ }
       
     // Temperature                  // Each 20s, runs on 16s, per 2s
-    if(((m / 2000 % 10 == 8 && cursor == 0 && isIdle) || cursor == 1) && dht.getTemperature() != DHT_INIT_VALUE){
+    if(((m / 2000 % 10 == 8 && cursor == 0 && isIdle) || cursor == 1) && dht.hasTemperature()){
       display.setTimeSeparator(false);
       display.setCursor(0);
       display.print((int) dht.getTemperature());
@@ -26,7 +26,7 @@ public:
     } else
     
     // Humidity                     // Each 20s, runs on 18s, per 2s
-    if(((m / 2000 % 10 == 9 && cursor == 0 && isIdle) || cursor == 2) && dht.getHumidity() != DHT_INIT_VALUE){
+    if(((m / 2000 % 10 == 9 && cursor == 0 && isIdle) || cursor == 2) && dht.hasHumidity()){
       display.setTimeSeparator(false);
       display.clear();
       display.setCursor(0);
@@ -64,10 +64,12 @@ public:
       display.incrementBrightness();
     else if(key == KEY_VALUE_DOWN)
       display.decrementBrightness();
-    else if(key == InputKey::KEY_FUNC_RIGHT)
+    else if(key == InputKey::KEY_FUNC_RIGHT){
       increment(cursor, 0, 2, false);
-    else if(key == InputKey::KEY_FUNC_LEFT)
+    }
+    else if(key == InputKey::KEY_FUNC_LEFT){
       decrement(cursor, 0, 2, false);
+    }
 
     render();
     return true;

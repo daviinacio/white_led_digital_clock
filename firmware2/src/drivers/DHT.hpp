@@ -3,7 +3,7 @@
 #include <avr/io.h>
 #include <DHT.h>
 
-#include "../lib/Buffer.h"
+#include "lib/Buffer.h"
 #include "Display.h"
 
 #define DHT_INIT_VALUE -255
@@ -26,18 +26,22 @@ public:
     dht(DHT_PIN, DHT_TYPE),
     temp_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE),
     hum_buffer(DHT_BUFFER_LENGTH, DHT_INIT_VALUE) {
+      enabled = false;
       interval = DHT_BUFFER_INTERVAL / DHT_BUFFER_LENGTH;
   };
 
   void begin(){
     dht.begin();
+    enabled = true;
   };
 
   void run(){
     // Disable display timer while dht read
     display.disable();
+    cli();
     float dht_temp_read = dht.readTemperature();
     float dht_hum_read = dht.readHumidity();
+    sei();
     display.enable();
 
     // Ignore read errors
@@ -57,8 +61,16 @@ public:
     return temp_buffer.getAverage();
   }
 
+  bool hasTemperature(){
+    return getTemperature() != DHT_INIT_VALUE;
+  }
+
   int getHumidity(){
     return hum_buffer.getAverage();
+  }
+
+  bool hasHumidity(){
+    return getHumidity() != DHT_INIT_VALUE;
   }
 };
 

@@ -5,13 +5,11 @@
 
 void range(unsigned short& value, unsigned short min, unsigned short max);
 
-void increment(unsigned short& value, unsigned short min, unsigned short max, bool loop, unsigned short mult);
+template <typename A, typename B, typename C>
+void increment(A& value, B min, C max, bool loop);
 
-void increment(unsigned short& value, unsigned short min, unsigned short max, bool loop);
-
-void decrement(unsigned short& value, unsigned short min, unsigned short max, bool loop, unsigned short mult);
-
-void decrement(unsigned short& value, unsigned short min, unsigned short max, bool loop);
+template <typename A, typename B, typename C>
+void decrement(A& value, B min, C max, bool loop);
 
 unsigned short month_last_day(unsigned short year, unsigned short month);
 

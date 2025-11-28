@@ -7,25 +7,56 @@ void range(unsigned short& value, unsigned short min, unsigned short max){
     value = min;
 }
 
-void increment(unsigned short& value, unsigned short min, unsigned short max, bool loop, unsigned short mult){
-  value = value < max ? value + min(max - value, mult) : (
-    loop ? min : max
-  );
+// template <typename T>
+// void increment(T& value, T min, T max, bool loop){
+//     value = value < max ? value + 1 : (
+//     loop ? min : max
+//   );
+// }
+
+// template <typename T>
+// void increment(T& value, T min, T max, bool loop) {
+//     // Cast value, min, and max to a larger type (e.g., int) for safe arithmetic
+//     int larger_value = static_cast<int>(value);
+//     int larger_min = static_cast<int>(min);
+//     int larger_max = static_cast<int>(max);
+
+//     // Perform the increment logic
+//     larger_value = (larger_value < larger_max) ? larger_value + 1 : (loop ? larger_min : larger_max);
+
+//     // Cast back to the original type
+//     value = static_cast<T>(larger_value);
+// }
+
+template <typename A, typename B, typename C>
+void increment(A& value, B min, C max, bool loop){
+    // Cast min and max to the same type as value (T) for the comparison and arithmetic
+    A larger_min = static_cast<A>(min);
+    A larger_max = static_cast<A>(max);
+
+    // Perform the increment logic
+    value = (value < larger_max) ? value + 1 : (loop ? larger_min : larger_max);
 }
 
-void increment(unsigned short& value, unsigned short min, unsigned short max, bool loop){
-  increment(value, min, max, loop, 1);
+template <typename A, typename B, typename C>
+void decrement (A& value, B min, C max, bool loop){
+    // Cast min and max to the same type as value (T) for the comparison and arithmetic
+    A larger_min = static_cast<A>(min);
+    A larger_max = static_cast<A>(max);
+
+  value = value > larger_min ? value - 1 : (loop ? larger_max : larger_min);
 }
 
-void decrement(unsigned short& value, unsigned short min, unsigned short max, bool loop, unsigned short mult){
-  value = value > min ? value - min(value, mult) : (
-    loop ? max : min
-  );
-}
+// Explicit instantiations
+template void increment<unsigned short, int, int>(unsigned short&, int, int, bool);
+template void decrement<unsigned short, int, int>(unsigned short&, int, int, bool);
 
-void decrement(unsigned short& value, unsigned short min, unsigned short max, bool loop){
-  decrement(value, min, max, loop, 1);
-}
+template void increment<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
+template void decrement<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
+
+template void increment<uint8_t, int, int>(uint8_t&, int, int, bool);
+template void decrement<uint8_t, int, int>(uint8_t&, int, int, bool);
+
 
 unsigned short month_last_day(unsigned short year, unsigned short month){
   bool elapse_year = year % 4 == 0;

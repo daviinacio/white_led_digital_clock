@@ -1,6 +1,6 @@
 #ifndef WLDC_PANEL_H
 #define WLDC_PANEL_H
-#include "../lib/Input.hpp"
+#include "lib/Input.hpp"
 
 #define PANEL_DEFAULT_INTERVAL 100
 #define PANEL_DEFAULT_COOLDOWN 250

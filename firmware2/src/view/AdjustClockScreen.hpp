@@ -119,36 +119,46 @@ public:
 
   void handleKey(InputKey key){
     if(cursor == 0) {        // Minute
-      if(key == KEY_VALUE_UP)
+      if(key == KEY_VALUE_UP){
         increment(minute, 0, 59, true);
-      else if(key == KEY_VALUE_DOWN)
+      }
+      else if(key == KEY_VALUE_DOWN){
         decrement(minute, 0, 59, true);
+      }
     }
     else if(cursor == 1) {   // Hour
-      if(key == KEY_VALUE_UP)
+      if(key == KEY_VALUE_UP){
         increment(hour, 0, 23, true);
-      else if(key == KEY_VALUE_DOWN)
+      }
+      else if(key == KEY_VALUE_DOWN){
         decrement(hour, 0, 23, true);
+      }
     }
     else if(cursor == 2) {   // Day
-      if(key == KEY_VALUE_UP)
+      if(key == KEY_VALUE_UP){
         increment(day, 1, month_last_day(year, month), true);
-      else if(key == KEY_VALUE_DOWN)
+      }
+      else if(key == KEY_VALUE_DOWN){
         decrement(day, 1, month_last_day(year, month), true);
+      }
     }
     else if(cursor == 3) {   // Month
-      if(key == KEY_VALUE_UP)
+      if(key == KEY_VALUE_UP){
         increment(month, 1, 12, true);
-      else if(key == KEY_VALUE_DOWN)
+      }
+      else if(key == KEY_VALUE_DOWN){
         decrement(month, 1, 12, true);
+      }
 
       range(day, 1, month_last_day(year, month));
     }
     else if(cursor == 4) {   // Year
-      if(key == KEY_VALUE_UP)
+      if(key == KEY_VALUE_UP){
         increment(year, 2000, 2038, true);
-      else if(key == KEY_VALUE_DOWN)
+      }
+      else if(key == KEY_VALUE_DOWN){
         decrement(year, 2000, 2038, true);
+      }
 
       range(day, 1, month_last_day(year, month));
     }

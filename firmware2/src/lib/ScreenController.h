@@ -1,5 +1,5 @@
 #include "Input.hpp"
-#include "../drivers/Display.h"
+#include "drivers/Display.h"
 
 #ifndef WLDC_SCREEN_CONTROLLER_CLASS_H
 #define WLDC_SCREEN_CONTROLLER_CLASS_H

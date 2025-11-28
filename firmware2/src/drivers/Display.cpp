@@ -1,6 +1,6 @@
 #include "Display.h"
-#include "../config.h"
-#include "../utils.h"
+#include "config.h"
+#include "utils.h"
 
 DisplayDriver display; 
 
@@ -371,6 +371,6 @@ void DisplayDriver::run_multiplex(){
 }
 
 // TIMER2 Interrupt
-// ISR(TIMER2_COMPA_vect){
-//   display.run_multiplex();
-// }
+ISR(TIMER2_COMPA_vect){
+  display.run_multiplex();
+}

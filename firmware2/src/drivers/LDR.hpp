@@ -2,7 +2,7 @@
 #include <Thread.h>
 #include <avr/io.h>
 
-#include "../lib/Buffer.h"
+#include "lib/Buffer.h"
 
 #ifndef WLDC_LDR_DRIVER_H
 #define WLDC_LDR_DRIVER_H

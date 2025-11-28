@@ -15,10 +15,13 @@
     "CONFIGURACAO",
     "DDRB",
     "DDRD",
+    "maxv",
+    "minv",
     "OCIE",
     "PORTB",
     "PORTD",
     "runned",
+    "sebastian",
     "TCCR",
     "TIMSK",
     "vect",
@@ -26,7 +29,8 @@
   ],
   "C_Cpp.errorSquiggles": "enabled",
   "files.associations": {
-    "*.ds_store": "cpp"
+    "*.ds_store": "cpp",
+    "new": "cpp"
   },
   "cSpell.customDictionaries": {
     "custom-dictionary-workspace": {

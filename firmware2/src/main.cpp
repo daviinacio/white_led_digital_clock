@@ -13,6 +13,10 @@
 #include "utils.h"
 #include "Arduino.h"
 
+// Assets
+#include "assets/music/sebastian_bach/bourree.hpp"
+#include "assets/music/coca_cola/theme.hpp"
+
 // Drivers
 #include "drivers/Display.h"
 #include "drivers/RTC.hpp"
@@ -25,6 +29,7 @@ AnalogPanel panel = AnalogPanel(A3, 100);
 
 // Core
 #include "lib/ScreenController.h"
+#include "lib/MusicPlayer.hpp"
 
 // Screens
 #include "view/HomeScreen.hpp"
@@ -40,6 +45,8 @@ ChronometerScreen chronometer_screen;
 AdjustClockScreen adjust_clock_screen;
 BrightnessScreen brightness_screen;
 
+MusicPlayer player;
+
 void key_press(InputKey key, unsigned int milliseconds);
 
 void setup() {
@@ -47,6 +54,7 @@ void setup() {
   cpu.add(&display);
   cpu.add(&dht);
   cpu.add(&panel);
+  cpu.add(&player);
   //cpu.add(&buzzer);
 
   // Screens
@@ -61,11 +69,15 @@ void setup() {
 
   // Driver Begins
   rtc.begin();
-  dht.begin();
+  //dht.begin();
   display.begin();
+  buzzer.begin();
 
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
+
+  // player.playSync(sebastian_bach__bourree);
+  player.playSync(coca_cola__theme);
 
   // Boot screen
   display.enable();
@@ -81,8 +93,4 @@ void key_press(InputKey key, unsigned int milliseconds){
   if(milliseconds < PANEL_LONG_PRESS || key != InputKey::KEY_HOME) return;
   display.printScroll(F("----"), 1000);
   screen_controller.navigate(WLDC_SCREEN_HOME);
-}
-
-ISR(TIMER2_COMPA_vect){
-  display.run_multiplex();
 }
