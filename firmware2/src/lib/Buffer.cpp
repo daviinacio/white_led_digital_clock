@@ -1,29 +1,4 @@
-#ifndef WLDC_BUFFER_H
-#define WLDC_BUFFER_H
-
-class Buffer {
-  public:
-    // Constructors
-    Buffer(unsigned short, short);
-    
-    // Getters    
-    short calcAverage();
-    short getAverage();
-    short getAt(unsigned short);
-    bool empty();
-    unsigned short size();
-    
-    // Setters
-    void fill(short);
-    void insert(short);
-    void clear();
-    
-  private:
-    short init;
-    short *values;
-    unsigned short length;
-    short average;
-};
+#include "Buffer.h"
 
 // Constructors
 Buffer::Buffer(unsigned short length, short init){
@@ -32,7 +7,6 @@ Buffer::Buffer(unsigned short length, short init){
   this->init = init;
   this->clear();
 }
-
 
 // Getters
 short Buffer::calcAverage(){
@@ -62,7 +36,6 @@ unsigned short Buffer::size(){
   return this->length;
 }
 
-
 // Setters
 void Buffer::fill(short value){
   for(unsigned short i = 0; i < this->length; i++)
@@ -87,6 +60,3 @@ void Buffer::clear(){
   // Clear the Buffer and enable to fill on first insert
   this->fill(this->init);
 }
-
-
-#endif

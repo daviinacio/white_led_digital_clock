@@ -9,7 +9,7 @@
  * 
  */
 
-#include "config.hpp"
+#include "config.h"
 #include "utils.h"
 #include "Arduino.h"
 
@@ -18,6 +18,7 @@
 #include "drivers/RTC.hpp"
 #include "drivers/DHT.hpp"
 #include "drivers/Panel.hpp"
+#include "drivers/Buzzer.hpp"
 
 // Hardware
 AnalogPanel panel = AnalogPanel(A3, 100);
@@ -39,7 +40,6 @@ ChronometerScreen chronometer_screen;
 AdjustClockScreen adjust_clock_screen;
 BrightnessScreen brightness_screen;
 
-void key_up(InputKey key, unsigned int milliseconds);
 void key_press(InputKey key, unsigned int milliseconds);
 
 void setup() {
@@ -47,6 +47,7 @@ void setup() {
   cpu.add(&display);
   cpu.add(&dht);
   cpu.add(&panel);
+  //cpu.add(&buzzer);
 
   // Screens
   screen_controller.add(&home_screen);
@@ -59,15 +60,15 @@ void setup() {
   cpu.add(&screen_controller);
 
   // Driver Begins
-  display.begin();
   rtc.begin();
   dht.begin();
+  display.begin();
 
   panel.addEventListener(&screen_controller);
-  panel.onKeyUp(key_up);
   panel.onKeyPress(key_press);
 
   // Boot screen
+  display.enable();
   display.print(WLDC_SPLASH_TEXT);
   delay(WLDC_SETUP_DELAY);
 }
@@ -76,15 +77,12 @@ void loop() {
   cpu.run();
 }
 
-void key_up(InputKey key, unsigned int milliseconds){
-  // if(display.isScrolling() && key == KEY_HOME){
-  //   screen_controller.navigateNext();
-  // }
-}
-
 void key_press(InputKey key, unsigned int milliseconds){
   if(milliseconds < PANEL_LONG_PRESS || key != InputKey::KEY_HOME) return;
-  screen_controller.navigate(HomeScreen::Id);
-  display.clearScroll();
   display.printScroll(F("----"), 1000);
+  screen_controller.navigate(WLDC_SCREEN_HOME);
+}
+
+ISR(TIMER2_COMPA_vect){
+  display.run_multiplex();
 }

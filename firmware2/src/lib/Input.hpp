@@ -36,6 +36,7 @@ public:
   void onKeyPress(void (*callback)(InputKey key, unsigned int milliseconds));
   void onKeyUp(void (*callback)(InputKey key, unsigned int milliseconds));
   bool isIdle(unsigned int milliseconds);
+  void release();
   void addEventListener(InputListener* _listener);
 protected:
   unsigned long last_time_pressed;
@@ -74,9 +75,10 @@ inline void Input::onKeyUp(void (*callback)(InputKey key, unsigned int milliseco
 inline bool Input::shouldRun(unsigned long time){
   InputKey key = readInput();
   if(key == InputKey::KEY_DEFAULT){
-    enabled = false;
     if(last_key_pressed != InputKey::KEY_DEFAULT){
-      triggerKeyUp(last_key_pressed, millis() - last_time_pressed);
+      if(enabled)
+        triggerKeyUp(last_key_pressed, millis() - last_time_pressed);
+      enabled = false;
       last_key_pressed = InputKey::KEY_DEFAULT;
       return false;
     }
@@ -101,6 +103,11 @@ inline void Input::run(){
 
 inline bool Input::isIdle(unsigned int milliseconds){
   return (millis() - last_run) >= milliseconds;
+}
+
+inline void Input::release(){
+  enabled = false;
+  last_time_pressed = millis();
 }
 
 inline void Input::addEventListener(InputListener *_listener){

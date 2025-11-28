@@ -1,13 +1,6 @@
 #include <avr/io.h>
 #include <Thread.h>
-
-#ifndef WLDC_DISPLAY_DEBUG_MODE
-#define WLDC_DISPLAY_DEBUG_MODE false
-#endif
-
-#ifndef WLDC_DISPLAY_DEBUG_WATCH_ALL
-#define WLDC_DISPLAY_DEBUG_WATCH_ALL false
-#endif
+#include "LDR.hpp"
 
 #ifndef WLDC_DISPLAY_SEGMENT_PORT
 #define WLDC_DISPLAY_SEGMENT_PORT PORTD
@@ -29,10 +22,11 @@
 #define WLDC_DISPLAY_DRIVER_H
 
 #define DISP_LENGTH 4
-// #define DISP_PIN_FIRST PB2
-// #define DISP_PIN_LAST PB5
+#define DISP_BR_PIN A2
 #define DISP_BR_MIN 1
 #define DISP_BR_MAX 64
+#define DISP_BR_BUFFER_LENGTH 16
+#define DISP_BR_BUFFER_INTERVAL 2000
 #define DISP_DEFAULT_SCROLL_INTERVAL 150
 #define DISP_DEFAULT_FRACTION_DIGITS 2
 
@@ -109,7 +103,9 @@ const byte seven_seg_asciis [] PROGMEM = {
 
 class DisplayDriver : public Thread {
 protected:
-  unsigned short brightness = DISP_BR_MAX / 2;
+  // unsigned short brightness = DISP_BR_MAX / 2;
+  LdrDriver brightness;
+  
 
   byte content [DISP_LENGTH];
   unsigned short multiplex_count = 0;
@@ -129,11 +125,13 @@ public:
   void run_multiplex();
 
   void setBrightness(unsigned short _brightness);
+  unsigned short getBrightness();
+  
+  void autoBrightness();
   void incrementBrightness();
   void decrementBrightness();
-  void setTimeSeparator(bool _time_separator);
 
-  unsigned short getBrightness();
+  void setTimeSeparator(bool _time_separator);
 
   void setCursor(unsigned short _cursor);
   void clear();
@@ -163,10 +161,12 @@ public:
 
   bool isScrolling();
 
-  void run();
+  void run() override;
+  bool shouldRun(unsigned long time) override;
   
   void enable();
   void disable();
+  void disable(bool clean);
 };
 
 // Global display instance

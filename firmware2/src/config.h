@@ -1,0 +1,16 @@
+// Debug
+#define WLDC_DISPLAY_DEBUG_MODE false
+#define WLDC_DISPLAY_DEBUG_WATCH_ALL false
+
+// Setup
+#define WLDC_SPLASH_TEXT F("DAVI")
+#define WLDC_SETUP_DELAY 1000
+
+// Behavior
+#define PANEL_LONG_PRESS 750
+
+// Screens
+#define WLDC_SCREEN_HOME 1
+#define WLDC_SCREEN_CHRONOMETER 2
+#define WLDC_SCREEN_BRIGHTNESS 3
+#define WLDC_SCREEN_ADJUST_CLOCK 4

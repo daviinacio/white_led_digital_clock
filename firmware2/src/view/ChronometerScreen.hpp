@@ -1,25 +1,13 @@
-#include "../lib/Screen.h"
-#include "../drivers/Display.h"
-#include <Thread.h>
-
-#include "BrightnessScreen.hpp"
-
-#ifndef WLDC_CHRONOMETER_SCREEN_H
-#define WLDC_CHRONOMETER_SCREEN_H
-
 class ChronometerScreen : public Screen, public Thread {
 protected:
   unsigned int counter = 0;
 
 public:
-  static constexpr ScreenID Id = 2;
-
-  ChronometerScreen(): Screen(Id, 100), Thread(NULL, 100) {
+  ChronometerScreen(): Screen(WLDC_SCREEN_CHRONOMETER, 100), Thread(NULL, 100) {
     enabled = false;
   }
 
   void start() override {
-    // display.clearScroll();
     display.printScroll(F("    CRONOMETRO    "));
   }
 
@@ -51,22 +39,18 @@ public:
     }
   }
 
-  void run() override {
-    counter++;
-    counter %= (int) pow(10, DISP_LENGTH);
-    Thread::run();
-  }
-
   void keyUp(InputKey key, unsigned int milliseconds) override {
     if(key == KEY_HOME){
       if(display.isScrolling())
-        navigate(BrightnessScreen::Id);
+        navigate(WLDC_SCREEN_BRIGHTNESS);
       else
         navigate(1);
     }
   }
 
   bool keyDown(InputKey key) override {
+    if(display.isScrolling()) return true;
+
     if(key == KEY_VALUE_UP){
       enabled = !enabled;
       runned();
@@ -81,6 +65,10 @@ public:
     render();
     return true;
   }
-};
 
-#endif
+  void run() override {
+    counter++;
+    counter %= (int) pow(10, DISP_LENGTH);
+    Thread::run();
+  }
+};

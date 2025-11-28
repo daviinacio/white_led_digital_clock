@@ -1,22 +1,13 @@
-#include "../lib/Screen.h"
-
-#include "../drivers/Display.h"
-#include "../drivers/RTC.hpp"
-#include "../drivers/DHT.hpp"
-
-#include "ChronometerScreen.hpp"
-
-#ifndef WLDC_HOME_SCREEN_H
-#define WLDC_HOME_SCREEN_H
-
 class HomeScreen : public Screen {
 private:
   unsigned short cursor = 0;
 
 public:
-  static constexpr ScreenID Id = 1;
+  HomeScreen() : Screen(WLDC_SCREEN_HOME){}
 
-  HomeScreen() : Screen(Id){}
+  void start() override {
+    cursor = 0;
+  }
 
   void render() override {
     DateTime now = rtc.now();
@@ -59,8 +50,12 @@ public:
   }
 
   void keyUp(InputKey key, unsigned int milliseconds) override {
-    if(key == KEY_HOME && !display.isScrolling()){
-        navigate(ChronometerScreen::Id);
+    if(key == KEY_HOME){
+      if(cursor == 0)
+        navigate(WLDC_SCREEN_CHRONOMETER);
+
+      cursor = 0;
+      render();
     }
   }
 
@@ -77,6 +72,12 @@ public:
     render();
     return true;
   }
-};
 
-#endif
+  void keyPress(InputKey key, unsigned int milliseconds){
+    if(milliseconds < PANEL_LONG_PRESS) return;
+    if(key == InputKey::KEY_VALUE_UP || key == InputKey::KEY_VALUE_DOWN){
+      display.autoBrightness();
+      display.printScroll(F("AUTO"), 1500);
+    }
+  }
+};

@@ -1,8 +1,17 @@
 #include "Display.h"
+#include "../config.h"
+#include "../utils.h"
 
 DisplayDriver display; 
 
-DisplayDriver::DisplayDriver(){
+DisplayDriver::DisplayDriver() : brightness(
+  DISP_BR_PIN,
+  DISP_BR_MIN,
+  DISP_BR_MAX,
+  DISP_BR_MAX / 2,
+  DISP_BR_BUFFER_LENGTH,
+  DISP_BR_BUFFER_INTERVAL
+) {
   time_separator = false;
   scroll_cursor = 0;
   strcpy(scroll_content, "");
@@ -41,6 +50,11 @@ void DisplayDriver::run(){
   Thread::run();
 }
 
+bool DisplayDriver::shouldRun(unsigned long time){
+  if(brightness.shouldRun(millis()))
+    brightness.run();
+  return Thread::shouldRun(time);
+}
 
 // Print methods
 void DisplayDriver::setCursor(unsigned short col){
@@ -57,31 +71,32 @@ void DisplayDriver::clear(){
 }
 
 void DisplayDriver::print(char c){
-  
   c = toupper(c);
 
   #if WLDC_DISPLAY_DEBUG_MODE
     content[cursor] = c;
 
     if((WLDC_DISPLAY_DEBUG_WATCH_ALL || cursor == DISP_LENGTH -1)){
+      Serial.print('[');
       for(size_t i = 0; i < DISP_LENGTH; i++) {
         Serial.print(content[i] == 0x00 ? ' ' : (char) content[i]);
-        Serial.print(i == decimal_position -1 ? "." : " ");
-        if(i == 1) Serial.print(time_separator ? ": " : "  ");
+        if(i < DISP_LENGTH -1)
+          Serial.print(i == decimal_position -1 ? "." : i == 1 ? "" : " ");
+        if(i == 1)
+          Serial.print(time_separator ? ":" : " ");
       }
-      Serial.println();
+      Serial.println(']');
     }
   #else
     content[cursor] = (char) pgm_read_word(&(seven_seg_asciis[((int) c) - seven_seg_ascii_init]));
   #endif
-  
-  decimal_position = 0;
   cursor++;
 }
 
 void DisplayDriver::print(char* c){
   for(size_t i = 0; i < strlen(c) && cursor < DISP_LENGTH; i++)
     print(c[i]);
+  decimal_position = 0;
 }
 
 void DisplayDriver::print(const __FlashStringHelper* text){
@@ -109,11 +124,11 @@ void DisplayDriver::print(double decimal, int fractionDigits){
   itoa(num, num_str, 10);
   itoa(places, places_str, 10);
 
-  if(!enabled)
-    decimal_position = cursor + strlen(num_str);
-
   print(num_str);
   print(places_str);
+  
+  if(!enabled)
+    decimal_position = cursor + strlen(num_str);
 }
 
 void DisplayDriver::print(double decimal){
@@ -194,7 +209,7 @@ void DisplayDriver::printScroll(const __FlashStringHelper* text, int _interval) 
   scroll_cursor = 0;
   scroll_forward = true;
   enabled = true;
-  setInterval(_interval);
+  interval = _interval;
 
   const char* flashPtr = reinterpret_cast<const char*>(text);
   strncpy_P(scroll_content, flashPtr, 32);
@@ -236,34 +251,34 @@ void DisplayDriver::printScrollReverse(const __FlashStringHelper * text) {
 
 // Getters and Setters
 void DisplayDriver::setBrightness(unsigned short _brightness){
-  if(_brightness > DISP_BR_MAX)
-    brightness = DISP_BR_MAX;
-  else if(_brightness <= DISP_BR_MIN)
-    brightness = DISP_BR_MIN;
-  else brightness = _brightness;
+  brightness.enabled = false;
+  range(_brightness, DISP_BR_MIN, DISP_BR_MAX);
+  brightness.set(_brightness);
+}
+
+void DisplayDriver::autoBrightness(){
+  brightness.enabled = true;
 }
 
 void DisplayDriver::incrementBrightness(){
-  int temp = brightness;
+  int temp = brightness.value();
   temp += DISP_BR_MAX/8;
   if(temp % 2 != 0) temp -= 1;
   setBrightness(temp);
 }
 
 void DisplayDriver::decrementBrightness(){
-  int temp =  brightness;
+  int temp =  brightness.value();
   temp -= DISP_BR_MAX/8;
   setBrightness(max(temp, DISP_BR_MIN));
 }
 
 void DisplayDriver::setTimeSeparator(bool _time_separator){
-  // Serial.print("DisplayDriver::setTimeSeparator ");
-  // Serial.println(_time_separator ? "true" : "false");
   time_separator = _time_separator;
 } 
 
 unsigned short DisplayDriver::getBrightness(){
-  return brightness;
+  return brightness.value();
 }
 
 bool DisplayDriver::isScrolling(){
@@ -283,18 +298,11 @@ void DisplayDriver::begin(){
   WLDC_DISPLAY_SEGMENT_PORT = 0xff;                   // Set all PortD pins to HIGH
 
   // PinMode display select pins
-  WLDC_DISPLAY_DIGIT_DDR = B00111110;               // Set pins 9, 10, 11, 12, 13 to output and others to input
-  WLDC_DISPLAY_DIGIT_PORT = B00111110;              // Set all PortB pins to HIGH
-
-  delay(50);
-  WLDC_DISPLAY_DIGIT_PORT = B00111100;
-  delay(50);
-  WLDC_DISPLAY_DIGIT_PORT = B00111110;
-  delay(100);
-
-  WLDC_DISPLAY_SEGMENT_PORT = 0x00;                   // Set all PortD pins to LOW 
-  WLDC_DISPLAY_DIGIT_PORT = 0x00;                   // Set all PortB pins to LOW
-
+  for(size_t i = 0; i < DISP_LENGTH; i++){
+    WLDC_DISPLAY_DIGIT_DDR ^= (1 << GET_DIGIT_PIN_BIT(i));
+    WLDC_DISPLAY_DIGIT_PORT ^= (1 << GET_DIGIT_PIN_BIT(i));
+  }
+  
   /*    *    ATMEGA TIMER2    *    */
   
   // Turn on CTC mode
@@ -309,12 +317,7 @@ void DisplayDriver::begin(){
   TCNT2  = 0;
   OCR2A = 100;
 
-  if(WLDC_DISPLAY_DEBUG_MODE) {
-    disable();
-  }
-  else {
-    enable();
-  }
+  disable(false);
 }
 
 void DisplayDriver::enable(){
@@ -323,25 +326,30 @@ void DisplayDriver::enable(){
 }
 
 void DisplayDriver::disable(){
-  TIMSK2 &= ~(1 << OCIE2A); // disable timer compare interrupt
-  WLDC_DISPLAY_SEGMENT_PORT = 0x00;             // Clean display pins
+  disable(true);
+}
+
+void DisplayDriver::disable(bool clean){
+  TIMSK2 &= ~(1 << OCIE2A);                 // disable timer compare interrupt
+  if(clean)
+    WLDC_DISPLAY_SEGMENT_PORT = 0x00;         // Clean display pins
 }
 
 void DisplayDriver::run_multiplex(){
   // Clean display
-  WLDC_DISPLAY_SEGMENT_PORT = 0x00;                                   // Sets all PortD pins to LOW
+  WLDC_DISPLAY_SEGMENT_PORT = 0x00;         // Sets all PortD pins to LOW
 
   // Brightness control
-  if((multiplex_count/DISP_LENGTH) < brightness){
-    WLDC_DISPLAY_DIGIT_PORT |= 0b00111100;                          // Puts pins PB2, PB3, PB4, PB5 to HIGH
-    WLDC_DISPLAY_DIGIT_PORT ^= 0b00111100;                          // Toggle pins PB2, PB3, PB4, PB5 to LOW
+  if(((short) (multiplex_count/DISP_LENGTH)) < brightness.value()){
+    WLDC_DISPLAY_DIGIT_PORT |= 0b00111100;  // Puts pins PB2, PB3, PB4, PB5 to HIGH
+    WLDC_DISPLAY_DIGIT_PORT ^= 0b00111100;  // Toggle pins PB2, PB3, PB4, PB5 to LOW
   
     // Active the current digit of display
-    WLDC_DISPLAY_DIGIT_PORT ^= (1 << GET_DIGIT_PIN_BIT(multiplex_digit));  // Toggle the current digit pin to HIGH
+    WLDC_DISPLAY_DIGIT_PORT ^= (1 << GET_DIGIT_PIN_BIT(multiplex_digit));   // Toggle the current digit pin to HIGH
   
     // Set display content
-    WLDC_DISPLAY_SEGMENT_PORT ^= content[multiplex_digit];                 // Sets the display content and uses ^= to invert the bits
-                                                  // (the display actives with LOW state)
+    WLDC_DISPLAY_SEGMENT_PORT ^= content[multiplex_digit];                  // Sets the display content and uses ^= to invert the bits
+                                            // (the display actives with LOW state)
     
     // Set time marker
     if(time_separator && multiplex_digit == DISP_LENGTH -1)
@@ -363,6 +371,6 @@ void DisplayDriver::run_multiplex(){
 }
 
 // TIMER2 Interrupt
-ISR(TIMER2_COMPA_vect){
-  display.run_multiplex();
-}
+// ISR(TIMER2_COMPA_vect){
+//   display.run_multiplex();
+// }

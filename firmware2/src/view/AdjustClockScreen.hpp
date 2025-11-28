@@ -1,12 +1,3 @@
-#include "../lib/Screen.h"
-#include "../drivers/Display.h"
-#include "../drivers/RTC.hpp"
-
-#include "RTClib.h"
-
-#ifndef WLDC_ADJUST_CLOCK_SCREEN_H
-#define WLDC_ADJUST_CLOCK_SCREEN_H
-
 #define DISP_BRINK_INTERVAL 300
 
 class AdjustClockScreen : public Screen {
@@ -20,9 +11,7 @@ protected:
   unsigned short second = 0;
 
 public:
-  static constexpr ScreenID Id = 4;
-
-  AdjustClockScreen() : Screen(Id, 100) {}
+  AdjustClockScreen() : Screen(WLDC_SCREEN_ADJUST_CLOCK, 100) {}
 
   void start() override {
     DateTime now = rtc.now();
@@ -41,6 +30,7 @@ public:
     
     if(cursor == 0 || cursor == 1){  // Minutes & Hours
       display.setCursor(0);
+      display.setTimeSeparator(true);
 
       if((cursor == 1 && millis() / DISP_BRINK_INTERVAL % 3 == 0) && isIdle){   // Blink 1/3 on focus
         display.print(F("  "));
@@ -63,6 +53,7 @@ public:
     else
     if(cursor == 2){  // Day
       display.setCursor(0);
+      display.setTimeSeparator(false);
       display.print(F("D "));
 
       if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && isIdle){  // Blink 1/3 on focus
@@ -107,12 +98,9 @@ public:
     }
   }
 
-  void stop() override {
-    display.setCursor(0);
-    display.print(F("A 03"));
-  }
-
   bool keyDown(InputKey key) override {
+    if(display.isScrolling()) return true;
+
     if(key == KEY_FUNC_LEFT)
       increment(cursor, 0, 4, false);
     else if(key == KEY_FUNC_RIGHT)
@@ -179,5 +167,3 @@ public:
     }
   }
 };
-
-#endif

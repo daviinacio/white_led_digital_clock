@@ -45,6 +45,9 @@ bool ScreenController::add(Screen *_screen){
 }
 
 void ScreenController::navigate(ScreenID screen_id){
+  if(input)
+    input->release();
+
   if(activeScreen) {
     activeScreen->stop();
   }

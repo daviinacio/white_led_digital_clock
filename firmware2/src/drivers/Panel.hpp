@@ -3,7 +3,7 @@
 #include "../lib/Input.hpp"
 
 #define PANEL_DEFAULT_INTERVAL 100
-#define PANEL_DEFAULT_COOLDOWN 150
+#define PANEL_DEFAULT_COOLDOWN 250
 
 #define PANEL_RANGE_KEY_HOME        (value < 190)                   // ~0
 #define PANEL_RANGE_KEY_VALUE_UP    (value >= 750 && value < 900)   // ~808

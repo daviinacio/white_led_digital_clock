@@ -3,7 +3,7 @@
 #include <avr/io.h>
 #include <DHT.h>
 
-#include "../lib/Buffer.hpp"
+#include "../lib/Buffer.h"
 #include "Display.h"
 
 #define DHT_INIT_VALUE -255

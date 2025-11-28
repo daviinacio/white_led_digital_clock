@@ -12,6 +12,7 @@
   "cSpell.words": [
     "ATMEGA",
     "COMPA",
+    "CONFIGURACAO",
     "DDRB",
     "DDRD",
     "OCIE",
@@ -23,5 +24,16 @@
     "vect",
     "WLDC"
   ],
-  "C_Cpp.errorSquiggles": "enabled"
+  "C_Cpp.errorSquiggles": "enabled",
+  "files.associations": {
+    "*.ds_store": "cpp"
+  },
+  "cSpell.customDictionaries": {
+    "custom-dictionary-workspace": {
+      "name": "custom-dictionary-workspace",
+      "path": "${workspaceFolder:firmware2}/.cspell/custom-dictionary-workspace.txt",
+      "addWords": true,
+      "scope": "workspace"
+    }
+  }
 }
