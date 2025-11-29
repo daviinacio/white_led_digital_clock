@@ -16,6 +16,7 @@
 // Assets
 #include "assets/music/sebastian_bach/bourree.hpp"
 #include "assets/music/coca_cola/theme.hpp"
+#include "assets/music/unknown/la_cucaracha.hpp"
 
 // Drivers
 #include "drivers/Display.h"
@@ -36,6 +37,7 @@ AnalogPanel panel = AnalogPanel(A3, 100);
 #include "view/ChronometerScreen.hpp"
 #include "view/AdjustClockScreen.hpp"
 #include "view/BrightnessScreen.hpp"
+#include "view/MusicScreen.hpp"
 
 ThreadController cpu;
 ScreenController screen_controller;
@@ -44,6 +46,7 @@ HomeScreen home_screen;
 ChronometerScreen chronometer_screen;
 AdjustClockScreen adjust_clock_screen;
 BrightnessScreen brightness_screen;
+MusicScreen music_screen;
 
 void key_press(InputKey key, unsigned int milliseconds);
 
@@ -60,6 +63,7 @@ void setup() {
   screen_controller.add(&chronometer_screen);
   screen_controller.add(&brightness_screen);
   screen_controller.add(&adjust_clock_screen);
+  screen_controller.add(&music_screen);
 
   // Screen Threads
   cpu.add(&chronometer_screen);
@@ -67,15 +71,16 @@ void setup() {
 
   // Driver Begins
   rtc.begin();
-  //dht.begin();
-  display.begin(100);
+  dht.begin();
+  display.begin();
   buzzer.begin();
 
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
 
   // player.playSync(sebastian_bach__bourree);
-  player.playSync(coca_cola__theme);
+  // player.playSync(coca_cola__theme);
+  player.playSync(unknown__la_cucaracha);
 
   // Boot screen
   display.enable();

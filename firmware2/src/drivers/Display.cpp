@@ -287,7 +287,7 @@ bool DisplayDriver::isScrolling(){
 
 
 // Low level implementation
-void DisplayDriver::begin(uint16_t frequency_hz){
+void DisplayDriver::begin(){
   #if WLDC_DISPLAY_DEBUG_MODE
     Serial.begin(9600);
     return;
@@ -315,9 +315,6 @@ void DisplayDriver::begin(uint16_t frequency_hz){
 
   // Initialize Registers
   TCNT2  = 0;
-
-  // uint16_t ocr = ((1000000.0 / (frequency_hz * DISP_LENGTH)) / 4.0) - 1.0;
-  // range(ocr, 0, 255);
 
   OCR2A = 100;
 

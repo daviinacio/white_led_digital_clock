@@ -67,16 +67,15 @@
 #define NOTE_As7  3729
 #define NOTE_B7   3951
 
-#define WHOLE_NOTE                    0x01
-#define HALF_NOTE                     0x02
-#define QUARTER_NOTE                  0x03
-#define EIGHTH_NOTE                   0x04
-#define SIXTEENTH_NOTE                0x05
-#define THIRTY_SECOND_NOTE            0x06
-
-#define WHOLE_DOTTED_NOTE             0x07
-#define HALF_DOTTED_NOTE              0x08
-#define QUARTER_DOTTED_NOTE           0x09
-#define EIGHTH_DOTTED_NOTE            0x10
-#define SIXTEENTH_DOTTED_NOTE         0x11
-#define THIRTY_SECOND_DOTTED_NOTE     0x12
+#define WHOLE_DOTTED_NOTE             0x01
+#define WHOLE_NOTE                    0x02
+#define HALF_DOTTED_NOTE              0x03
+#define HALF_NOTE                     0x04
+#define QUARTER_DOTTED_NOTE           0x05
+#define QUARTER_NOTE                  0x06
+#define EIGHTH_DOTTED_NOTE            0x07
+#define EIGHTH_NOTE                   0x08
+#define SIXTEENTH_DOTTED_NOTE         0x09
+#define SIXTEENTH_NOTE                0x10
+#define THIRTY_SECOND_DOTTED_NOTE     0x11
+#define THIRTY_SECOND_NOTE            0x12

@@ -121,7 +121,7 @@ protected:
 
 public:
   DisplayDriver();
-  void begin(uint16_t frequency_hz);
+  void begin();
   void run_multiplex();
 
   void setBrightness(unsigned short _brightness);

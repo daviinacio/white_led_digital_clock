@@ -35,10 +35,13 @@ template void range<unsigned int, int, int>(unsigned int&, int, int);
 template void increment<uint8_t, int, int>(uint8_t&, int, int, bool);
 template void increment<unsigned short, int, int>(unsigned short&, int, int, bool);
 template void increment<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
+template void increment<signed char, int, int>(signed char&, int, int, bool);
+template void increment<unsigned char, int, unsigned int>(unsigned char&, int, unsigned int, bool);
 
 template void decrement<uint8_t, int, int>(uint8_t&, int, int, bool);
 template void decrement<unsigned short, int, int>(unsigned short&, int, int, bool);
 template void decrement<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
+template void decrement<signed char, int, int>(signed char&, int, int, bool);
 
 
 

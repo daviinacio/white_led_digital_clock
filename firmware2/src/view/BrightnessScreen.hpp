@@ -2,8 +2,6 @@
 
 class BrightnessScreen : public Screen {
 private:
-  unsigned short cursor = 0;
-  unsigned short music = 0;
 
 public:
   BrightnessScreen() : Screen(WLDC_SCREEN_BRIGHTNESS, 250){}
@@ -19,16 +17,12 @@ public:
     if(display.getBrightness() < 10)
       display.print(F(" "));
     display.printEnd(display.getBrightness());
-
-
-    display.setCursor(0);
-    display.print(music);
   }
 
   void keyUp(InputKey key, unsigned int milliseconds) override {
     if(key == KEY_HOME){
       if(display.isScrolling())
-        navigate(WLDC_SCREEN_ADJUST_CLOCK);
+        navigate(WLDC_SCREEN_MUSIC);
       else
         navigate(1);
     }
@@ -41,21 +35,6 @@ public:
       display.incrementBrightness();
     else if(key == KEY_VALUE_DOWN)
       display.decrementBrightness();
-    else if(key == KEY_FUNC_LEFT){
-      
-      if(music == 0){
-        player.play(coca_cola__theme, 1);
-      }
-      else if(music == 1){
-        player.play(sebastian_bach__bourree, 1);
-      }
-
-      music++;
-      music = music % 2;
-    }
-    else if(key == KEY_FUNC_RIGHT){
-      player.stop();
-    }
 
     render();
     return true;
