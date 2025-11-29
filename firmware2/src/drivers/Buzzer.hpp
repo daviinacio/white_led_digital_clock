@@ -7,11 +7,6 @@
 
 class Buzzer {
 protected:
-  void down(){
-    PORTB &= ~(1 << BZ_PIN);
-  }
-
-  unsigned long last_run_us = 0;
 
 public:
   void enable(){
@@ -55,15 +50,15 @@ public:
     disable();
   }
   
-  void tone(unsigned short frequency_hz){
+  void tone(uint16_t frequency_hz){
     if(frequency_hz == 0) return stop();
     enable();
 
-    uint16_t calculated_ocr = (16000000L / (2L * 64L * frequency_hz)) -1L;
+    uint16_t calculated_ocr = (F_CPU / (2L * 64L * frequency_hz)) -1L;
     calculated_ocr = min(calculated_ocr, 65535);
     calculated_ocr = max(calculated_ocr, 1);
 
-    OCR1A = (unsigned int) calculated_ocr;
+    OCR1A = (uint16_t) calculated_ocr;
   }
 
   void stop(){

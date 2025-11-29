@@ -3,13 +3,14 @@
 #ifndef WLDC_UTILS_H
 #define WLDC_UTILS_H
 
-void range(unsigned short& value, unsigned short min, unsigned short max);
+template <typename A, typename B, typename C>
+void range(A& value, B minv, C maxv);
 
 template <typename A, typename B, typename C>
-void increment(A& value, B min, C max, bool loop);
+void increment(A& value, B minv, C maxv, bool loop);
 
 template <typename A, typename B, typename C>
-void decrement(A& value, B min, C max, bool loop);
+void decrement(A& value, B minv, C maxv, bool loop);
 
 unsigned short month_last_day(unsigned short year, unsigned short month);
 

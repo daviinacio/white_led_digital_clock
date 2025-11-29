@@ -45,14 +45,12 @@ ChronometerScreen chronometer_screen;
 AdjustClockScreen adjust_clock_screen;
 BrightnessScreen brightness_screen;
 
-MusicPlayer player;
-
 void key_press(InputKey key, unsigned int milliseconds);
 
 void setup() {
   // Hardware Threads
   cpu.add(&display);
-  cpu.add(&dht);
+  // cpu.add(&dht);
   cpu.add(&panel);
   cpu.add(&player);
   //cpu.add(&buzzer);
@@ -70,7 +68,7 @@ void setup() {
   // Driver Begins
   rtc.begin();
   //dht.begin();
-  display.begin();
+  display.begin(100);
   buzzer.begin();
 
   panel.addEventListener(&screen_controller);

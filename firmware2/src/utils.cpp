@@ -1,61 +1,45 @@
 #include "utils.h"
 
-void range(unsigned short& value, unsigned short min, unsigned short max){
-  if(value > max)
-    value = max;
-  else if(value < min)
-    value = min;
+template <typename A, typename B, typename C>
+void range(A& value, B minv, C maxv){
+  A larger_min = static_cast<A>(minv);
+  A larger_max = static_cast<A>(maxv);
+
+  value = max(min(value, larger_max), larger_min);
 }
 
-// template <typename T>
-// void increment(T& value, T min, T max, bool loop){
-//     value = value < max ? value + 1 : (
-//     loop ? min : max
-//   );
-// }
-
-// template <typename T>
-// void increment(T& value, T min, T max, bool loop) {
-//     // Cast value, min, and max to a larger type (e.g., int) for safe arithmetic
-//     int larger_value = static_cast<int>(value);
-//     int larger_min = static_cast<int>(min);
-//     int larger_max = static_cast<int>(max);
-
-//     // Perform the increment logic
-//     larger_value = (larger_value < larger_max) ? larger_value + 1 : (loop ? larger_min : larger_max);
-
-//     // Cast back to the original type
-//     value = static_cast<T>(larger_value);
-// }
-
 template <typename A, typename B, typename C>
-void increment(A& value, B min, C max, bool loop){
+void increment(A& value, B minv, C maxv, bool loop){
     // Cast min and max to the same type as value (T) for the comparison and arithmetic
-    A larger_min = static_cast<A>(min);
-    A larger_max = static_cast<A>(max);
+    A larger_min = static_cast<A>(minv);
+    A larger_max = static_cast<A>(maxv);
 
     // Perform the increment logic
     value = (value < larger_max) ? value + 1 : (loop ? larger_min : larger_max);
 }
 
 template <typename A, typename B, typename C>
-void decrement (A& value, B min, C max, bool loop){
+void decrement (A& value, B minv, C maxv, bool loop){
     // Cast min and max to the same type as value (T) for the comparison and arithmetic
-    A larger_min = static_cast<A>(min);
-    A larger_max = static_cast<A>(max);
+    A larger_min = static_cast<A>(minv);
+    A larger_max = static_cast<A>(maxv);
 
   value = value > larger_min ? value - 1 : (loop ? larger_max : larger_min);
 }
 
 // Explicit instantiations
-template void increment<unsigned short, int, int>(unsigned short&, int, int, bool);
-template void decrement<unsigned short, int, int>(unsigned short&, int, int, bool);
-
-template void increment<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
-template void decrement<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
+template void range<double, int, int>(double&, int, int);
+template void range<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short);
+template void range<unsigned int, int, int>(unsigned int&, int, int);
 
 template void increment<uint8_t, int, int>(uint8_t&, int, int, bool);
+template void increment<unsigned short, int, int>(unsigned short&, int, int, bool);
+template void increment<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
+
 template void decrement<uint8_t, int, int>(uint8_t&, int, int, bool);
+template void decrement<unsigned short, int, int>(unsigned short&, int, int, bool);
+template void decrement<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short, bool);
+
 
 
 unsigned short month_last_day(unsigned short year, unsigned short month){
