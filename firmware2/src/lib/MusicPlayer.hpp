@@ -44,7 +44,7 @@ public:
     if(music == _music) return;
     music = _music;
 
-    for (uint8_t i = 0; i < helper.voice_count; i++) {
+    for (uint8_t i = 0; i < min(helper.voice_count, BZ_MAX_VOICES); i++) {
       const uint16_t* voice_pointer = (const uint16_t*) pgm_read_ptr(&_music[i + 1]);
       ((MusicVoicePlayer*) thread[i])->play(voice_pointer);
     }

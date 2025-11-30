@@ -51,7 +51,7 @@ void DisplayDriver::run(){
 }
 
 bool DisplayDriver::shouldRun(unsigned long time){
-  if(brightness.shouldRun(millis()))
+  if(brightness.shouldRun(time))
     brightness.run();
   return Thread::shouldRun(time);
 }
@@ -371,7 +371,7 @@ void DisplayDriver::run_multiplex(){
   multiplex_count %= DISP_BR_MAX * DISP_LENGTH;
 }
 
-// // TIMER2 Interrupt
-// ISR(TIMER2_COMPA_vect){
-//   display.run_multiplex();
-// }
+// TIMER2 Interrupt
+ISR(TIMER2_COMPA_vect){
+  display.run_multiplex();
+}

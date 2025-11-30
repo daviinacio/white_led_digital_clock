@@ -76,7 +76,7 @@ void setup() {
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
 
-  // player.playSync(sebastian_bach__bourree, 0);
+  player.playSync(sebastian_bach__bourree, 0);
 
   // Boot screen
   display.enable();
@@ -95,11 +95,4 @@ void key_press(InputKey key, unsigned int milliseconds){
   if(milliseconds < PANEL_LONG_PRESS || key != InputKey::KEY_HOME) return;
   display.printScroll(F("----"), 1000);
   screen_controller.navigate(WLDC_SCREEN_HOME);
-}
-
-// TIMER2 Interrupt
-ISR(TIMER2_COMPA_vect){
-  display.run_multiplex();
-  // if(buzzer.shouldRun(millis()))
-    
 }
