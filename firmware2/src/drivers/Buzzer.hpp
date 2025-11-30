@@ -9,17 +9,6 @@ class Buzzer {
 protected:
 
 public:
-  void enable(){
-    // Set COM1A0 to toggle OC1A (pin 9) on Compare Match
-    TCCR1A |= (1 << COM1A0); 
-    TCCR1B |= (1 << CS11) | (1 << CS10);
-  }
-
-  void disable(){
-    TCCR1A &= ~(1 << COM1A0);
-    PORTB &= ~(1 << BZ_PIN);
-  }
-
   void begin(){
     // Pin Mode
     DDRB ^= (1 << BZ_PIN);
@@ -35,34 +24,23 @@ public:
     // Turn on CTC mode (WGM12 bit set)
     TCCR1B |= (1 << WGM12);
   }
-
-  void toneSync(unsigned short frequency_hz, unsigned short interval){
-    unsigned int tone_init = millis();
-    if(frequency_hz == 0) {
-      delay(interval);
-    }
-    else {
-      while((millis() - (tone_init + interval)) & 0x80000000){
-        PORTB ^= (1 << BZ_PIN);
-        delayMicroseconds(1000000L / (frequency_hz * 2));
-      }
-    }
-    disable();
-  }
   
   void tone(uint16_t frequency_hz){
-    if(frequency_hz == 0) return stop();
-    enable();
+    if(frequency_hz == 0) return mute();
+    // Set COM1A0 to toggle OC1A (pin 9) on Compare Match
+    TCCR1A |= (1 << COM1A0); 
+    TCCR1B |= (1 << CS11) | (1 << CS10);
 
     uint16_t calculated_ocr = (F_CPU / (2L * 64L * frequency_hz)) -1L;
-    calculated_ocr = min(calculated_ocr, 65535);
-    calculated_ocr = max(calculated_ocr, 1);
+    range(calculated_ocr, 1, 65535);
 
     OCR1A = (uint16_t) calculated_ocr;
+    TCNT1  = 0;
   }
 
-  void stop(){
-    disable();
+  void mute(){
+    TCCR1A &= ~(1 << COM1A0);
+    PORTB &= ~(1 << BZ_PIN);
   };
 };
 
