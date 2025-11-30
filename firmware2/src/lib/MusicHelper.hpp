@@ -86,7 +86,7 @@ public:
     return 0;
   }
 
-    bool check_tie(uint8_t duration_symbol){
+  bool check_tie(uint8_t duration_symbol){
     return (
       duration_symbol == WHOLE_NOTE_TIE ||
       duration_symbol == HALF_NOTE_TIE ||
@@ -106,6 +106,10 @@ public:
       duration_symbol == SIXTEENTH_NOTE_SLUR ||
       duration_symbol == THIRTY_SECOND_NOTE_SLUR
     );
+  }
+
+  bool has_gap(uint8_t duration_symbol){
+    return !check_tie(duration_symbol) && !check_slur(duration_symbol);
   }
 
   uint16_t calc_note_octave(uint16_t note){

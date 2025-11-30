@@ -67,33 +67,36 @@
 #define NOTE_As7  3729
 #define NOTE_B7   3951
 
-#define WHOLE_NOTE                    0x01
-#define HALF_NOTE                     0x02
-#define QUARTER_NOTE                  0x03
-#define EIGHTH_NOTE                   0x04
-#define SIXTEENTH_NOTE                0x05
-#define THIRTY_SECOND_NOTE            0x06
+#define REPEAT_START                  0x01
+#define REPEAT_END                    0x02
+
+#define WHOLE_NOTE                    0x03
+#define HALF_NOTE                     0x04
+#define QUARTER_NOTE                  0x05
+#define EIGHTH_NOTE                   0x06
+#define SIXTEENTH_NOTE                0x07
+#define THIRTY_SECOND_NOTE            0x08
 
 // Extends 0.5x
-#define WHOLE_NOTE_DOTTED             0x07
-#define HALF_NOTE_DOTTED              0x08
-#define QUARTER_NOTE_DOTTED           0x09
-#define EIGHTH_NOTE_DOTTED            0x10
-#define SIXTEENTH_NOTE_DOTTED         0x11
-#define THIRTY_SECOND_NOTE_DOTTED     0x12
+#define WHOLE_NOTE_DOTTED             0x09
+#define HALF_NOTE_DOTTED              0x10
+#define QUARTER_NOTE_DOTTED           0x11
+#define EIGHTH_NOTE_DOTTED            0x12
+#define SIXTEENTH_NOTE_DOTTED         0x13
+#define THIRTY_SECOND_NOTE_DOTTED     0x14
 
 // On same pitch
-#define WHOLE_NOTE_TIE                0x13
-#define HALF_NOTE_TIE                 0x14
-#define QUARTER_NOTE_TIE              0x15
-#define EIGHTH_NOTE_TIE               0x16
-#define SIXTEENTH_NOTE_TIE            0x17
-#define THIRTY_SECOND_NOTE_TIE        0x18
+#define WHOLE_NOTE_TIE                0x15
+#define HALF_NOTE_TIE                 0x16
+#define QUARTER_NOTE_TIE              0x17
+#define EIGHTH_NOTE_TIE               0x18
+#define SIXTEENTH_NOTE_TIE            0x19
+#define THIRTY_SECOND_NOTE_TIE        0x20
 
 // On different pitch
-#define WHOLE_NOTE_SLUR                0x19
-#define HALF_NOTE_SLUR                 0x20
-#define QUARTER_NOTE_SLUR              0x21
-#define EIGHTH_NOTE_SLUR               0x22
-#define SIXTEENTH_NOTE_SLUR            0x23
-#define THIRTY_SECOND_NOTE_SLUR        0x24
+#define WHOLE_NOTE_SLUR               0x21
+#define HALF_NOTE_SLUR                0x22
+#define QUARTER_NOTE_SLUR             0x23
+#define EIGHTH_NOTE_SLUR              0x24
+#define SIXTEENTH_NOTE_SLUR           0x25
+#define THIRTY_SECOND_NOTE_SLUR       0x26

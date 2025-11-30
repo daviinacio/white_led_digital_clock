@@ -76,13 +76,7 @@ void setup() {
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
 
-  // buzzer.tone(NOTE_C4, 0);
-  // delay(1000);
-  // buzzer.tone(NOTE_E4, 1);
-  // delay(1000);
-  // buzzer.tone(NOTE_G4, 1);
-
-  // player.playSync(coca_cola__theme, 2);
+  // player.playSync(sebastian_bach__bourree, 0);
 
   // Boot screen
   display.enable();
