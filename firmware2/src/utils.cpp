@@ -31,6 +31,7 @@ void decrement (A& value, B minv, C maxv, bool loop){
 template void range<double, int, int>(double&, int, int);
 template void range<unsigned short, int, unsigned short>(unsigned short&, int, unsigned short);
 template void range<unsigned int, int, int>(unsigned int&, int, int);
+template void range<unsigned int, int, long>(unsigned int&, int, long);
 
 template void increment<uint8_t, int, int>(uint8_t&, int, int, bool);
 template void increment<unsigned short, int, int>(unsigned short&, int, int, bool);

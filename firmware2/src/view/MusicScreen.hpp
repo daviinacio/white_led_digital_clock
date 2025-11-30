@@ -1,8 +1,9 @@
 #include "lib/Screen.h"
 
-const uint16_t* music_list[] = {
-  coca_cola__theme,
+const uint16_t* const* music_list[] = {
   sebastian_bach__bourree,
+  wintergatan__marble_machine,
+  coca_cola__theme,
   unknown__la_cucaracha
 };
 
@@ -50,7 +51,7 @@ public:
     if(cursor == 0){
       if(key == KEY_VALUE_UP){
         if(player.enabled)
-          player.stop();
+          player.pause();
         else {
           player.play(music_list[music_index], octave);
         }
@@ -77,6 +78,16 @@ public:
 
     render();
     return true;
+  }
+
+  void keyPress(InputKey key, unsigned int milliseconds) override {
+    if(milliseconds < PANEL_LONG_PRESS) return;
+
+    if(key == InputKey::KEY_VALUE_UP){
+      player.stop();
+      input->release();
+      display.printScroll(F("STOP"), 500);
+    }
   }
 
 };

@@ -12,6 +12,7 @@
   "cSpell.words": [
     "ATMEGA",
     "COMPA",
+    "COMPB",
     "CONFIGURACAO",
     "cucaracha",
     "DDRB",
@@ -21,11 +22,14 @@
     "OCIE",
     "PORTB",
     "PORTD",
+    "prescaler",
+    "Prescaler",
     "runned",
     "sebastian",
     "TCCR",
     "TIMSK",
     "vect",
+    "wintergatan",
     "WLDC"
   ],
   "C_Cpp.errorSquiggles": "enabled",

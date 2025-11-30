@@ -43,4 +43,6 @@ InputKey AnalogPanel::readInput() {
   return key;
 }
 
+AnalogPanel panel = AnalogPanel(A3, 100);
+
 #endif

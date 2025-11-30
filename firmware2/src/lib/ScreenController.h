@@ -4,7 +4,7 @@
 #ifndef WLDC_SCREEN_CONTROLLER_CLASS_H
 #define WLDC_SCREEN_CONTROLLER_CLASS_H
 
-#define MAX_SCREENS 7
+#define MAX_SCREENS 15
 
 #include "Screen.h"
 #include <ThreadController.h>

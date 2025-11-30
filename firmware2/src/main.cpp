@@ -17,6 +17,7 @@
 #include "assets/music/sebastian_bach/bourree.hpp"
 #include "assets/music/coca_cola/theme.hpp"
 #include "assets/music/unknown/la_cucaracha.hpp"
+#include "assets/music/wintergatan/marble_machine.hpp"
 
 // Drivers
 #include "drivers/Display.h"
@@ -24,9 +25,6 @@
 #include "drivers/DHT.hpp"
 #include "drivers/Panel.hpp"
 #include "drivers/Buzzer.hpp"
-
-// Hardware
-AnalogPanel panel = AnalogPanel(A3, 100);
 
 // Core
 #include "lib/ScreenController.h"
@@ -56,7 +54,7 @@ void setup() {
   // cpu.add(&dht);
   cpu.add(&panel);
   cpu.add(&player);
-  //cpu.add(&buzzer);
+  // cpu.add(&buzzer);
 
   // Screens
   screen_controller.add(&home_screen);
@@ -78,22 +76,36 @@ void setup() {
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
 
-  // player.playSync(sebastian_bach__bourree);
-  // player.playSync(coca_cola__theme);
-  player.playSync(unknown__la_cucaracha);
+  // buzzer.tone(NOTE_C4, 0);
+  // delay(1000);
+  // buzzer.tone(NOTE_E4, 1);
+  // delay(1000);
+  // buzzer.tone(NOTE_G4, 1);
+
+  // player.playSync(coca_cola__theme, 2);
 
   // Boot screen
   display.enable();
   display.print(WLDC_SPLASH_TEXT);
   delay(WLDC_SETUP_DELAY);
+
+  screen_controller.navigate(WLDC_SCREEN_MUSIC);
 }
 
 void loop() {
   cpu.run();
+  // buzzer.run();
 }
 
 void key_press(InputKey key, unsigned int milliseconds){
   if(milliseconds < PANEL_LONG_PRESS || key != InputKey::KEY_HOME) return;
   display.printScroll(F("----"), 1000);
   screen_controller.navigate(WLDC_SCREEN_HOME);
+}
+
+// TIMER2 Interrupt
+ISR(TIMER2_COMPA_vect){
+  display.run_multiplex();
+  // if(buzzer.shouldRun(millis()))
+    
 }

@@ -1,0 +1,75 @@
+#include "assets/music/base.h"
+
+const uint16_t wintergatan__marble_machine__config[] PROGMEM = {
+  123,  // BMP
+  4,    // Beats
+  1     // Voice count
+};
+
+const uint16_t wintergatan__marble_machine__voice_1[] PROGMEM = {
+  // BAR 1
+  NOTE_E5,  QUARTER_NOTE_DOTTED,
+  NOTE_B4,  EIGHTH_NOTE_TIE,
+  NOTE_B4,  QUARTER_NOTE_DOTTED,
+  NOTE_A4,  EIGHTH_NOTE,
+
+  // BAR 2
+  NOTE_G4,  EIGHTH_NOTE,
+  NOTE_A4,  QUARTER_NOTE,
+  NOTE_B4,  QUARTER_NOTE,
+  NOTE_G4,  EIGHTH_NOTE,
+  NOTE_A4,  EIGHTH_NOTE,
+  NOTE_D5,  EIGHTH_NOTE_TIE,
+
+  // BAR 3
+  NOTE_D5,  QUARTER_NOTE_DOTTED,
+  NOTE_B4,  EIGHTH_NOTE_TIE,
+  NOTE_B4,  QUARTER_NOTE_DOTTED,
+  NOTE_A4,  EIGHTH_NOTE,
+
+  // BAR 4
+  NOTE_G4,  EIGHTH_NOTE,
+  NOTE_A4,  QUARTER_NOTE,
+  NOTE_Fs4, QUARTER_NOTE,
+  NOTE_G4,  EIGHTH_NOTE,
+  NOTE_A4,  EIGHTH_NOTE,
+  NOTE_D5,  EIGHTH_NOTE_TIE,
+
+  // BAR 5
+  NOTE_D5,  QUARTER_NOTE,
+  NOTE_MT,  EIGHTH_NOTE,
+  NOTE_B4,  EIGHTH_NOTE_TIE,
+  NOTE_B4,  QUARTER_NOTE_DOTTED,
+  NOTE_MT,  EIGHTH_NOTE,
+  NOTE_A4,  EIGHTH_NOTE,
+
+  // BAR 6
+  NOTE_D5,  EIGHTH_NOTE,
+  NOTE_C5,  QUARTER_NOTE,
+  NOTE_B4,  QUARTER_NOTE,
+  NOTE_A4,  EIGHTH_NOTE,
+  NOTE_G4,  EIGHTH_NOTE,
+  NOTE_A4,  EIGHTH_NOTE,
+  
+  // BAR 7
+  NOTE_E4,  QUARTER_NOTE_DOTTED,
+  NOTE_B4,  EIGHTH_NOTE,
+  NOTE_B4,  QUARTER_NOTE,
+  NOTE_MT,  SIXTEENTH_NOTE,
+  NOTE_D5,  EIGHTH_NOTE,
+  
+  // BAR 8
+  NOTE_C5,  EIGHTH_NOTE,
+  NOTE_B4,  EIGHTH_NOTE,
+  NOTE_A4,  QUARTER_NOTE,
+  NOTE_G4,  QUARTER_NOTE,
+  NOTE_A4,  EIGHTH_NOTE,
+  NOTE_E5,  EIGHTH_NOTE,
+
+  0,0
+};
+
+const uint16_t* const wintergatan__marble_machine[] PROGMEM = {
+  wintergatan__marble_machine__config,
+  wintergatan__marble_machine__voice_1
+};
