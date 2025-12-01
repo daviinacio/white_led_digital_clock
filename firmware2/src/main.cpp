@@ -18,6 +18,7 @@
 #include "assets/music/coca_cola/theme.hpp"
 #include "assets/music/unknown/la_cucaracha.hpp"
 #include "assets/music/wintergatan/marble_machine.hpp"
+#include "assets/music/microsoft/windows_xp_shutdown.hpp"
 
 // Drivers
 #include "drivers/Display.h"
@@ -76,14 +77,14 @@ void setup() {
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
 
-  player.playSync(sebastian_bach__bourree, 0);
+  player.playSync(coca_cola__theme);
 
   // Boot screen
   display.enable();
   display.print(WLDC_SPLASH_TEXT);
   delay(WLDC_SETUP_DELAY);
 
-  screen_controller.navigate(WLDC_SCREEN_MUSIC);
+  screen_controller.navigate(WLDC_SCREEN_HOME);
 }
 
 void loop() {

@@ -2,9 +2,9 @@
 
 const uint16_t* const* music_list[] = {
   sebastian_bach__bourree,
-  wintergatan__marble_machine,
   coca_cola__theme,
-  unknown__la_cucaracha
+  unknown__la_cucaracha,
+  microsoft__windows_xp_shutdown
 };
 
 size_t music_list_length = sizeof(music_list) / sizeof(music_list[0]);
