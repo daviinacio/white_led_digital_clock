@@ -1,0 +1,94 @@
+#include "assets/music/base.h"
+
+static const uint16_t tv_show__stranger_things_theme__voice_1[] PROGMEM = {
+  MUSIC_BPM,    80,
+  MUSIC_BEATS,  4,
+
+  WHOLE_REST,
+
+  REPEAT_START, 30,
+
+  NOTE_C4,  SIXTEENTH_NOTE,
+  NOTE_E4,  SIXTEENTH_NOTE,
+  NOTE_G4,  SIXTEENTH_NOTE,
+  NOTE_B4,  SIXTEENTH_NOTE,
+  NOTE_C5,  SIXTEENTH_NOTE,
+  NOTE_B4,  SIXTEENTH_NOTE,
+  NOTE_G4,  SIXTEENTH_NOTE,
+  NOTE_E4,  SIXTEENTH_NOTE,
+  
+  REPEAT_END,
+
+  NOTE_E3,  WHOLE_NOTE,
+
+  NOTE_E3,  SIXTEENTH_NOTE,
+  NOTE_G3,  SIXTEENTH_NOTE,
+  NOTE_B3,  SIXTEENTH_NOTE,
+  NOTE_C4,  SIXTEENTH_NOTE,
+  NOTE_B3,  SIXTEENTH_NOTE,
+  NOTE_G3,  SIXTEENTH_NOTE,
+  NOTE_E3,  EIGHTH_NOTE,
+  NOTE_E3,  HALF_NOTE,
+
+  END
+};
+
+static const uint16_t tv_show__stranger_things_theme__voice_2[] PROGMEM = {
+  NOTE_E3,  WHOLE_NOTE,
+
+  WHOLE_REST,
+
+  WHOLE_REST,
+
+  NOTE_E2,  WHOLE_NOTE,
+
+  // 5
+  WHOLE_REST,
+
+  NOTE_E3,  QUARTER_NOTE,
+  NOTE_G5,  HALF_NOTE_DOTTED,
+
+  HALF_REST_DOTTED,
+  NOTE_D3,  QUARTER_NOTE,
+
+  NOTE_E2,  WHOLE_NOTE_TIE,
+
+  HALF_REST_DOTTED,
+  NOTE_D3,  QUARTER_NOTE,
+
+  // 10
+  NOTE_E2,  WHOLE_NOTE_TIE,
+
+  HALF_REST,
+  NOTE_D3,  EIGHTH_NOTE_DOTTED,
+  NOTE_B2,  EIGHTH_NOTE_TIE,
+  SIXTEENTH_REST,
+  NOTE_B2,  EIGHTH_NOTE_TIE,
+
+  NOTE_B2,  WHOLE_NOTE_TIE,
+
+  WHOLE_REST,
+
+  NOTE_E4,  WHOLE_NOTE,
+
+  // 15
+  NOTE_G4,  QUARTER_NOTE,
+  NOTE_E4,  HALF_NOTE_DOTTED,
+
+  NOTE_E4,  HALF_NOTE,
+  NOTE_D5,  QUARTER_NOTE,
+  NOTE_B3,  QUARTER_NOTE,
+
+  NOTE_B3,  WHOLE_NOTE,
+
+  WHOLE_REST,
+
+  END
+};
+
+
+const uint16_t* const tv_show__stranger_things_theme[] PROGMEM = {
+  tv_show__stranger_things_theme__voice_1,
+  tv_show__stranger_things_theme__voice_2,
+  music_sheet_end
+};

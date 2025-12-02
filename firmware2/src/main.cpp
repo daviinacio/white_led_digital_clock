@@ -14,11 +14,7 @@
 #include "Arduino.h"
 
 // Assets
-#include "assets/music/sebastian_bach/bourree.hpp"
-#include "assets/music/coca_cola/theme.hpp"
-#include "assets/music/unknown/la_cucaracha.hpp"
-#include "assets/music/wintergatan/marble_machine.hpp"
-#include "assets/music/microsoft/windows_xp_shutdown.hpp"
+#include "assets/music/all.hpp"
 
 // Drivers
 #include "drivers/Display.h"
@@ -72,19 +68,20 @@ void setup() {
   rtc.begin();
   dht.begin();
   display.begin();
+  player.begin();
   buzzer.begin();
 
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
 
-  player.playSync(coca_cola__theme);
+  // player.playSync(tv_show__stranger_things_theme);
 
   // Boot screen
   display.enable();
   display.print(WLDC_SPLASH_TEXT);
   delay(WLDC_SETUP_DELAY);
 
-  screen_controller.navigate(WLDC_SCREEN_HOME);
+  screen_controller.navigate(WLDC_SCREEN_MUSIC);
 }
 
 void loop() {

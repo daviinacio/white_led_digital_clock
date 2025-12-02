@@ -43,6 +43,12 @@ public:
   }
   
   void tone(uint16_t frequency_hz, uint8_t voice = 0){
+    // Serial.print("Buzzer::tone frequency_hz=");
+    // Serial.print(frequency_hz);
+    // Serial.print(", voice=");
+    // Serial.print(voice);
+    // Serial.println(";");
+
     step[voice] = calc_freq_to_step(frequency_hz);
   }
 

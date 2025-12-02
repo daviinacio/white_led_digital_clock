@@ -4,97 +4,124 @@
 #include "assets/music/base.h"
 #include "drivers/Buzzer.hpp"
 
+#define NOTE_GAP_LOOPS 2
+
 #ifndef WLDC_MUSIC_VOICE_PLAYER_H
 #define WLDC_MUSIC_VOICE_PLAYER_H
 
-class MusicVoicePlayerObserver {
-  public:
-    virtual void on_player_finished() = 0;
-};
+// class MusicVoicePlayerObserver {
+//   public:
+//     virtual void on_player_finished() = 0;
+// };
 
-class MusicVoicePlayer : public Thread {
+class MusicVoicePlayer {
 protected:
-  MusicVoicePlayerObserver* observer = nullptr; 
-  const uint16_t* voice_pointer = nullptr;
-  uint8_t voice_index = 0;
   MusicHelper* helper;
-  
-  bool is_gap = false;
-  uint16_t cursor = 0;
 
+  uint16_t content_cursor = 0;
+  const uint16_t* content_pointer = nullptr;
+  uint8_t voice_index = 0;
+  uint8_t remaining_timing_loops = 0;
   uint16_t repeat_start_position = 0;
   uint16_t repeat_count = 0;
+  bool has_gap = false;
 
-  
+  uint16_t next_content_node(){
+    return pgm_read_word(&content_pointer[content_cursor++]);
+  }
+
+  void revert_content_cursor(){
+    content_cursor--;
+  }
+
+  void on_finished(){
+    this->active = false;
+    helper->on_player_finished();
+  }
+
 public:
-  MusicVoicePlayer(
-    uint8_t _voice_index,
-    MusicHelper* _helper
-  ){
-    voice_index = _voice_index;
-    helper = _helper;
-    enabled = false;
+  bool active = false;
+
+  MusicVoicePlayer(MusicHelper* _helper, uint8_t _voice_index){
+    this->helper = _helper;
+    this->voice_index = _voice_index;
   }
 
-  void play(const uint16_t* _voice_pointer){
-    voice_pointer = _voice_pointer;
-    cursor = 0;
-    enabled = true;
-    setInterval(0);
+  void setup(const uint16_t* _content_pointer){
+    this->content_pointer = _content_pointer;
+    this->content_cursor = 0;
+    this->remaining_timing_loops = 0;
+    this->active = true;
   }
 
-  void addObserver(MusicVoicePlayerObserver* _observer){
-    observer = _observer;
-  }
+  void run_loop(){
+    if(!active) return;
+    if(remaining_timing_loops > 1){
+      if(has_gap && remaining_timing_loops <= NOTE_GAP_LOOPS)
+        buzzer.mute(voice_index);
 
-  void stop(){
-    buzzer.mute(voice_index);
-    enabled = false;
-  }
-
-  void run() override {
-    uint16_t marker = pgm_read_word(&voice_pointer[cursor]);
-    uint16_t value = pgm_read_word(&voice_pointer[cursor + 1]);
-
-    if(marker == REPEAT_START){
-      repeat_count = value;
-      cursor += 2;
-      repeat_start_position = cursor;
-      setInterval(0);
+      remaining_timing_loops--;
       return;
     }
-    else if(marker == REPEAT_END){
-      if(repeat_count == 1)
-        cursor += 1;
-      else {
-        repeat_count--;
-        cursor = repeat_start_position;
+
+    uint16_t node = next_content_node();
+    
+    if(helper->is_note_symbol(node)){
+      uint16_t octave = next_content_node();
+      if(!helper->is_valid_octave(octave))
+        return revert_content_cursor();
+
+      uint16_t timing = next_content_node();
+      if(!helper->is_timing(timing))
+        return revert_content_cursor();
+
+      uint16_t timing_modifier = next_content_node();
+      if(!helper->is_timing_modifier(timing_modifier)){
+        revert_content_cursor();
+        timing_modifier = 0;
       }
-      setInterval(0);
+
+      has_gap = timing_modifier != TIE && timing_modifier != SLUR;
+      remaining_timing_loops = helper->get_timing_loops(timing);
+
+      double frequency_hz = helper->get_note_frequency(node, octave);
+
+      buzzer.tone((uint16_t) frequency_hz, voice_index);
       return;
     }
-    
-    if (marker == 0 && value == 0) {
-      stop();
-      if(observer)
-      observer->on_player_finished();
-      return;
-    }
-    
-    if(is_gap) {
-      setInterval(helper->gap);
-      is_gap = false;
+    else if(helper->is_rest(node)){
+      uint16_t timing = next_content_node();
+      if(!helper->is_timing(timing))
+        return revert_content_cursor();
+
       buzzer.mute(voice_index);
-      return Thread::run();
+      remaining_timing_loops = helper->get_timing_loops(timing);
     }
-
-    if(helper->has_gap(value) && helper->gap != 0)
-      is_gap = true;
-
-    setInterval(helper->calc_note_duration(value) - (is_gap ? helper->gap : 0));
-    cursor += 2;
-    buzzer.tone(helper->calc_note_octave(marker), voice_index);
-    return Thread::run();
+    else if(node == MUSIC_BPM){
+      helper->set_bpm(next_content_node());
+      run_loop();
+    }
+    else if(node == MUSIC_BEATS){
+      helper->set_beats(next_content_node());
+      run_loop();
+    }
+    else if(node == REPEAT_START){
+      repeat_count = next_content_node();
+      repeat_start_position = content_cursor;
+      run_loop();
+    }
+    else if(node == REPEAT_END){
+      repeat_count--;
+      if(repeat_count > 0)
+        content_cursor = repeat_start_position;
+      run_loop();
+    }
+    else if(node == END){
+      return on_finished();
+    }
+    else {
+      run_loop();
+    }
   }
 };
 

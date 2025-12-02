@@ -1,12 +1,9 @@
 #include "assets/music/base.h"
 
-const uint16_t wintergatan__marble_machine__config[] PROGMEM = {
-  123,  // BMP
-  4,    // Beats
-  1     // Voice count
-};
-
 const uint16_t wintergatan__marble_machine__voice_1[] PROGMEM = {
+  MUSIC_BPM,    123,
+  MUSIC_BEATS,  4,
+
   // BAR 1
   NOTE_E5,  QUARTER_NOTE_DOTTED,
   NOTE_B4,  EIGHTH_NOTE_TIE,
@@ -37,10 +34,10 @@ const uint16_t wintergatan__marble_machine__voice_1[] PROGMEM = {
 
   // BAR 5
   NOTE_D5,  QUARTER_NOTE,
-  NOTE_MT,  EIGHTH_NOTE,
+  EIGHTH_REST,
   NOTE_B4,  EIGHTH_NOTE_TIE,
   NOTE_B4,  QUARTER_NOTE_DOTTED,
-  NOTE_MT,  EIGHTH_NOTE,
+  EIGHTH_REST,
   NOTE_A4,  EIGHTH_NOTE,
 
   // BAR 6
@@ -55,7 +52,7 @@ const uint16_t wintergatan__marble_machine__voice_1[] PROGMEM = {
   NOTE_E4,  QUARTER_NOTE_DOTTED,
   NOTE_B4,  EIGHTH_NOTE,
   NOTE_B4,  QUARTER_NOTE,
-  NOTE_MT,  SIXTEENTH_NOTE,
+  SIXTEENTH_REST,
   NOTE_D5,  EIGHTH_NOTE,
   
   // BAR 8
@@ -70,6 +67,6 @@ const uint16_t wintergatan__marble_machine__voice_1[] PROGMEM = {
 };
 
 const uint16_t* const wintergatan__marble_machine[] PROGMEM = {
-  wintergatan__marble_machine__config,
-  wintergatan__marble_machine__voice_1
+  wintergatan__marble_machine__voice_1,
+  music_sheet_end
 };

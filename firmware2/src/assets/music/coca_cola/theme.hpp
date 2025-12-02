@@ -1,12 +1,9 @@
 #include "assets/music/base.h"
 
-const uint16_t coca_cola__theme__config[] PROGMEM = {
-  112,  // BMP
-  2,    // Beats
-  2     // Voice count
-};
-
 const uint16_t coca_cola__theme__voice_1[] PROGMEM = {
+  MUSIC_BPM,    112,
+  MUSIC_BEATS,  2,
+
   NOTE_E5,  QUARTER_NOTE,
   NOTE_C5,  QUARTER_NOTE,
   NOTE_D5,  QUARTER_NOTE,
@@ -28,7 +25,7 @@ const uint16_t coca_cola__theme__voice_2[] PROGMEM = {
 
 
 const uint16_t* const coca_cola__theme[] PROGMEM = {
-  coca_cola__theme__config,
   coca_cola__theme__voice_1,
-  coca_cola__theme__voice_2
+  coca_cola__theme__voice_2,
+  music_sheet_end
 };

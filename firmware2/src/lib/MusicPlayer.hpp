@@ -5,48 +5,57 @@
 #ifndef WLDC_MUSIC_PLAYER_H
 #define WLDC_MUSIC_PLAYER_H
 
-class MusicPlayer : public ThreadController, protected MusicVoicePlayerObserver {
+class MusicPlayer : public Thread, protected MusicHelper {
 protected:
-  MusicHelper helper;
   const uint16_t* const* music;
+  MusicVoicePlayer* voice_players[BZ_MAX_VOICES];
+
+  void update_interval() override {
+    setInterval(((60000.0 / bpm) * beats) / WHOLE_NOTE_TIMING_LOOPS);
+  }
 
   void on_player_finished() override {
     for(int i = 0; i < BZ_MAX_VOICES; i++)
-      if(thread[i] && thread[i]->enabled) return;
+      if(voice_players[i] && voice_players[i]->active) return;
     
-    music = nullptr;
-    enabled = false;
+    stop();
   }
 
 public:
-  MusicPlayer(){
+  MusicPlayer() : MusicHelper() {
     enabled = false;
-
     for(int i = 0; i < BZ_MAX_VOICES; i++){
-      MusicVoicePlayer* voice_player = new MusicVoicePlayer(i, &helper);
-      voice_player->addObserver(this);
-      add(voice_player);
+      voice_players[i] = new MusicVoicePlayer(this, i);
     }
   }
 
-  void playSync(const uint16_t* const* _music, int8_t _octave = 0, uint16_t _gap = 32){
-    play(_music, _octave, _gap);
-    while(enabled)
-      run();
+  void begin(){
+    set_tunning_a4();
   }
 
-  void play(const uint16_t* const* _music, int8_t _octave = 0, uint16_t _gap = 32){
-    helper.read_from_music(_music);
-    helper.octave = _octave;
-    helper.gap = _gap;
+  const uint16_t* const* getCurrentMusic(){
+    return music;
+  }
+
+  void playSync(const uint16_t* const* _music, int8_t _octave = 0){
+    play(_music, _octave);
+    while(enabled)
+      if(shouldRun(millis()))
+        run();
+  }
+
+
+  void play(const uint16_t* const* _music, int8_t _octave_shift = 0){
     enabled = true;
+    octave_shift = _octave_shift;
     
     if(music == _music) return;
     music = _music;
 
-    for (uint8_t i = 0; i < min(helper.voice_count, BZ_MAX_VOICES); i++) {
-      const uint16_t* voice_pointer = (const uint16_t*) pgm_read_ptr(&_music[i + 1]);
-      ((MusicVoicePlayer*) thread[i])->play(voice_pointer);
+    for (uint8_t i = 0; i < BZ_MAX_VOICES; i++) {
+      const uint16_t* voice_pointer = (const uint16_t*) pgm_read_ptr(&_music[i]);
+      if(voice_pointer == music_sheet_end) break;
+      voice_players[i]->setup(voice_pointer);
     }
   }
 
@@ -57,10 +66,13 @@ public:
 
   void stop(){
     music = nullptr;
-    enabled = false;
+    this->pause();
+  }
 
+  void run() override {
     for(int i = 0; i < BZ_MAX_VOICES; i++)
-      ((MusicVoicePlayer*) thread[i])->stop();
+      voice_players[i]->run_loop();
+    return Thread::run();
   }
 };
 

@@ -1,120 +1,88 @@
 #include "assets/music/base.h"
 
+#define WHOLE_NOTE_TIMING_LOOPS 64
 class MusicHelper {
+protected:
+  uint8_t tunning;
+  uint8_t bpm;
+  uint8_t beats = 4;
+  int8_t octave_shift = 0;
+
+  double reference_note_frequencies[12];
+
+  double calc_frequency_octave(double frequency_hz, double octave_shift){
+    // return frequency_hz;
+    if(octave_shift == 0) return frequency_hz;
+    else if(octave_shift > 0) return frequency_hz * (pow(2, abs(octave_shift)));
+    else return frequency_hz / (pow(2, abs(octave_shift)));
+  }
+
+  double get_oct4_note_frequency(uint8_t note_symbol){
+    if(!is_note_symbol(note_symbol)) return 0.0;
+    double frequency_hz = reference_note_frequencies[note_symbol - NOTE_A];
+    return note_symbol <= NOTE_B ? frequency_hz : calc_frequency_octave(frequency_hz, -1);
+  }
+
+  virtual void update_interval() = 0;
+
 public:
-  // ROM attributes
-  uint16_t bpm = 0;
-  uint16_t beats = 0;
-  uint16_t voice_count = 0;
+  virtual void on_player_finished() = 0;
 
-  // Runtime attributes
-  uint16_t gap = 0;
-  int8_t octave = 0;
+  void set_tunning_a4(double a4 = 440.0){
+    for (int n = 0; n < 12; ++n){
+      reference_note_frequencies[n] = a4 * pow(2.0, n / 12.0);
+    }
+  };
 
-  void read_from_music(const uint16_t* const* _music){
-    const uint16_t* metadata = (const uint16_t*) pgm_read_ptr(&_music[0]);
-    bpm = pgm_read_word(&metadata[0]);
-    beats = pgm_read_word(&metadata[1]);
-    voice_count = pgm_read_word(&metadata[2]);
+  void set_bpm(uint8_t _bpm){
+    this->bpm = _bpm;
+    update_interval();
+  };
+
+  void set_beats(uint8_t _beats){
+    this->beats = _beats;
+    update_interval();
+  };
+
+  double get_note_frequency(uint8_t note_symbol, uint8_t octave){
+    return calc_frequency_octave(get_oct4_note_frequency(note_symbol), (octave + octave_shift) - 4);
   }
 
-  void clear(){
-    gap = 0;
-    octave = 0;
-    bpm = 0;
-    beats = 0;
-    voice_count = 0;
+  uint8_t get_timing_loops(uint8_t timing){
+         if(timing ==                WHOLE_NOTE) return WHOLE_NOTE_TIMING_LOOPS;
+    else if(timing ==                 HALF_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 2;
+    else if(timing ==              QUARTER_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 4;
+    else if(timing ==               EIGHTH_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 8;
+    else if(timing ==            SIXTEENTH_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 16;
+    else if(timing ==        THIRTY_SECOND_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 32;
+    else if(timing ==         SIXTY_FOURTH_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 64;
+    else if(timing ==         WHOLE_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS     ) * 1.5;
+    else if(timing ==          HALF_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS /  2) * 1.5;
+    else if(timing ==       QUARTER_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS /  4) * 1.5;
+    else if(timing ==        EIGHTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS /  8) * 1.5;
+    else if(timing ==     SIXTEENTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS / 16) * 1.5;
+    else if(timing == THIRTY_SECOND_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS / 32) * 1.5;
+    else if(timing ==  SIXTY_FOURTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS / 64) * 1.5;
+    else return 0;
   }
 
-  float whole_note_duration(){
-    return (60000.0 / bpm) * beats;
+  bool is_note_symbol(uint8_t node){
+    return node >= NOTE_A && node <= NOTE_Ab;
   }
 
-  uint16_t calc_note_duration(uint8_t duration_symbol){
-    float whole_note_duration = this->whole_note_duration();
-
-    if(
-      (duration_symbol == WHOLE_NOTE) ||
-      (duration_symbol == WHOLE_NOTE_TIE) ||
-      (duration_symbol == WHOLE_NOTE_SLUR)
-    ) return whole_note_duration;
-    else if(
-      (duration_symbol == HALF_NOTE) ||
-      (duration_symbol == HALF_NOTE_TIE) ||
-      (duration_symbol == HALF_NOTE_SLUR)
-    ) return whole_note_duration / 2;
-    else if(
-      (duration_symbol == QUARTER_NOTE) ||
-      (duration_symbol == QUARTER_NOTE_TIE) ||
-      (duration_symbol == QUARTER_NOTE_SLUR)
-    ) return whole_note_duration / 4;
-    else if(
-      (duration_symbol == EIGHTH_NOTE) ||
-      (duration_symbol == EIGHTH_NOTE_TIE) ||
-      (duration_symbol == EIGHTH_NOTE_SLUR)
-    ) return whole_note_duration / 8;
-    else if(
-      (duration_symbol == SIXTEENTH_NOTE) ||
-      (duration_symbol == SIXTEENTH_NOTE_TIE) ||
-      (duration_symbol == SIXTEENTH_NOTE_SLUR)
-    ) return whole_note_duration / 16;
-    else if(
-      (duration_symbol == THIRTY_SECOND_NOTE) ||
-      (duration_symbol == THIRTY_SECOND_NOTE_TIE) ||
-      (duration_symbol == THIRTY_SECOND_NOTE_SLUR)
-    ) return whole_note_duration / 32;
-
-    else if(
-      (duration_symbol == WHOLE_NOTE_DOTTED)
-    ) return (whole_note_duration) * 1.5; 
-    else if(
-      (duration_symbol == HALF_NOTE_DOTTED)
-    ) return (whole_note_duration / 2) * 1.5; 
-    else if(
-      (duration_symbol == QUARTER_NOTE_DOTTED)
-    ) return (whole_note_duration / 4) * 1.5; 
-    else if(
-      (duration_symbol == EIGHTH_NOTE_DOTTED)
-    ) return (whole_note_duration / 8) * 1.5; 
-    else if(
-      (duration_symbol == SIXTEENTH_NOTE_DOTTED)
-    ) return (whole_note_duration / 16) * 1.5; 
-    else if(
-      (duration_symbol == THIRTY_SECOND_NOTE_DOTTED)
-    ) return (whole_note_duration / 32) * 1.5;
-
-    return 0;
+  bool is_rest(uint8_t node){
+    return node == REST_NOTE;
   }
 
-  bool check_tie(uint8_t duration_symbol){
-    return (
-      duration_symbol == WHOLE_NOTE_TIE ||
-      duration_symbol == HALF_NOTE_TIE ||
-      duration_symbol == QUARTER_NOTE_TIE ||
-      duration_symbol == EIGHTH_NOTE_TIE ||
-      duration_symbol == SIXTEENTH_NOTE_TIE ||
-      duration_symbol == THIRTY_SECOND_NOTE_TIE
-    );
+  bool is_timing(uint8_t node){
+    return node >= WHOLE_NOTE && node <= SIXTY_FOURTH_NOTE_DOTTED;
   }
 
-  bool check_slur(uint8_t duration_symbol){
-    return (
-      duration_symbol == WHOLE_NOTE_SLUR ||
-      duration_symbol == HALF_NOTE_SLUR ||
-      duration_symbol == QUARTER_NOTE_SLUR ||
-      duration_symbol == EIGHTH_NOTE_SLUR ||
-      duration_symbol == SIXTEENTH_NOTE_SLUR ||
-      duration_symbol == THIRTY_SECOND_NOTE_SLUR
-    );
+  bool is_timing_modifier(uint8_t node){
+    return node == TIE || node == SLUR;
   }
 
-  bool has_gap(uint8_t duration_symbol){
-    return !check_tie(duration_symbol) && !check_slur(duration_symbol);
-  }
-
-  uint16_t calc_note_octave(uint16_t note){
-    if(octave == 0) return note;
-    else if(octave > 0) return note * (pow(2, abs(octave)));
-    else return note / (pow(2, abs(octave)));
+  bool is_valid_octave(uint8_t node){
+    return node >= 1 && node <= 8;
   }
 };

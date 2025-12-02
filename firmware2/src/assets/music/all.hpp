@@ -1,0 +1,6 @@
+#include "assets/music/sebastian_bach/bourree.hpp"
+#include "assets/music/coca_cola/theme.hpp"
+#include "assets/music/unknown/la_cucaracha.hpp"
+#include "assets/music/wintergatan/marble_machine.hpp"
+#include "assets/music/microsoft/windows_xp_shutdown.hpp"
+#include "assets/music/tv_show/stranger_things_theme.hpp"

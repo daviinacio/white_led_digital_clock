@@ -1,12 +1,9 @@
 #include "assets/music/base.h"
 
-const uint16_t unknown__la_cucaracha__config[] PROGMEM = {
-  131,  // BMP
-  2,    // Beats
-  1     // Voice count
-};
-
 const uint16_t unknown__la_cucaracha__voice_1[] PROGMEM = {
+  MUSIC_BPM,    131,
+  MUSIC_BEATS,  2,
+
   // First part
 
   NOTE_C4,  EIGHTH_NOTE,
@@ -55,6 +52,6 @@ const uint16_t unknown__la_cucaracha__voice_1[] PROGMEM = {
 };
 
 const uint16_t* const unknown__la_cucaracha[] PROGMEM = {
-  unknown__la_cucaracha__config,
-  unknown__la_cucaracha__voice_1
+  unknown__la_cucaracha__voice_1,
+  music_sheet_end
 };

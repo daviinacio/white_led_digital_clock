@@ -2,6 +2,7 @@
 
 const uint16_t* const* music_list[] = {
   sebastian_bach__bourree,
+  tv_show__stranger_things_theme,
   coca_cola__theme,
   unknown__la_cucaracha,
   microsoft__windows_xp_shutdown
@@ -16,7 +17,7 @@ protected:
   int8_t octave = 0;
 
 public:
-  MusicScreen() : Screen(WLDC_SCREEN_MUSIC, 500) { }
+  MusicScreen() : Screen(WLDC_SCREEN_MUSIC, DISP_BRINK_INTERVAL) { }
 
   void start() override {
     display.printScroll(F("    MUSICA    "));
@@ -28,7 +29,13 @@ public:
     
     if(cursor == 0){
       display.print(F("MS"));
-      display.printEnd(music_index + 1);
+
+      if((millis()/DISP_BRINK_INTERVAL % 3 == 0) && (music_list[music_index] != player.getCurrentMusic())){
+        display.print(F("  "));
+      }
+      else {
+        display.printEnd(music_index + 1);
+      }
     }
     else if(cursor == 1){
       display.print(F("OC"));
