@@ -1,13 +1,13 @@
 #ifndef WLDC_MUSIC_BASE_H
 #define WLDC_MUSIC_BASE_H
 
-static const uint16_t music_sheet_end[] PROGMEM {};
+static const uint8_t music_sheet_end[] PROGMEM {};
 
 #endif
 
 
 // Metadata
-#define END 0
+#define MUSIC_END 0
 #define MUSIC_BPM 10
 #define MUSIC_BEATS 11
 

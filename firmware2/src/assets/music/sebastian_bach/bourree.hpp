@@ -1,12 +1,6 @@
 #include "assets/music/base.h"
 
-// static const uint16_t sebastian_bach__bourree__header[] PROGMEM = {
-//   76, // BMP
-//   2,  // Beats
-//   2   // Voice count
-// };
-
-static const uint16_t sebastian_bach__bourree__right_hand[] PROGMEM = {
+static const uint8_t sebastian_bach__bourree__right_hand[] PROGMEM = {
   MUSIC_BPM,    76,
   MUSIC_BEATS,  2,
 
@@ -181,7 +175,7 @@ static const uint16_t sebastian_bach__bourree__right_hand[] PROGMEM = {
   0,0
 };
 
-static const uint16_t sebastian_bach__bourree__left_hand[] PROGMEM = {
+static const uint8_t sebastian_bach__bourree__left_hand[] PROGMEM = {
   REPEAT_START, 2,
 
   NOTE_G3,  EIGHTH_NOTE,
@@ -316,10 +310,10 @@ static const uint16_t sebastian_bach__bourree__left_hand[] PROGMEM = {
 
   REPEAT_END,
 
-  END
+  MUSIC_END
 };
 
-const uint16_t* const sebastian_bach__bourree[] PROGMEM = {
+const uint8_t* const sebastian_bach__bourree[] PROGMEM = {
   sebastian_bach__bourree__right_hand,
   sebastian_bach__bourree__left_hand,
   music_sheet_end

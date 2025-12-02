@@ -19,14 +19,14 @@ protected:
   MusicHelper* helper;
 
   uint16_t content_cursor = 0;
-  const uint16_t* content_pointer = nullptr;
+  const uint8_t* content_pointer = nullptr;
   uint8_t voice_index = 0;
   uint8_t remaining_timing_loops = 0;
   uint16_t repeat_start_position = 0;
   uint16_t repeat_count = 0;
   bool has_gap = false;
 
-  uint16_t next_content_node(){
+  uint8_t next_content_node(){
     return pgm_read_word(&content_pointer[content_cursor++]);
   }
 
@@ -47,7 +47,7 @@ public:
     this->voice_index = _voice_index;
   }
 
-  void setup(const uint16_t* _content_pointer){
+  void setup(const uint8_t* _content_pointer){
     this->content_pointer = _content_pointer;
     this->content_cursor = 0;
     this->remaining_timing_loops = 0;
@@ -64,18 +64,18 @@ public:
       return;
     }
 
-    uint16_t node = next_content_node();
+    uint8_t node = next_content_node();
     
     if(helper->is_note_symbol(node)){
-      uint16_t octave = next_content_node();
+      uint8_t octave = next_content_node();
       if(!helper->is_valid_octave(octave))
         return revert_content_cursor();
 
-      uint16_t timing = next_content_node();
+      uint8_t timing = next_content_node();
       if(!helper->is_timing(timing))
         return revert_content_cursor();
 
-      uint16_t timing_modifier = next_content_node();
+      uint8_t timing_modifier = next_content_node();
       if(!helper->is_timing_modifier(timing_modifier)){
         revert_content_cursor();
         timing_modifier = 0;
@@ -90,7 +90,7 @@ public:
       return;
     }
     else if(helper->is_rest(node)){
-      uint16_t timing = next_content_node();
+      uint8_t timing = next_content_node();
       if(!helper->is_timing(timing))
         return revert_content_cursor();
 
@@ -116,7 +116,7 @@ public:
         content_cursor = repeat_start_position;
       run_loop();
     }
-    else if(node == END){
+    else if(node == MUSIC_END){
       return on_finished();
     }
     else {

@@ -1,6 +1,6 @@
 #include "lib/Screen.h"
 
-const uint16_t* const* music_list[] = {
+const uint8_t* const* music_list[] = {
   sebastian_bach__bourree,
   tv_show__stranger_things_theme,
   coca_cola__theme,

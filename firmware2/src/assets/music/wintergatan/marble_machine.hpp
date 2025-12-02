@@ -1,6 +1,6 @@
 #include "assets/music/base.h"
 
-const uint16_t wintergatan__marble_machine__voice_1[] PROGMEM = {
+const uint8_t wintergatan__marble_machine__voice_1[] PROGMEM = {
   MUSIC_BPM,    123,
   MUSIC_BEATS,  4,
 
@@ -63,10 +63,10 @@ const uint16_t wintergatan__marble_machine__voice_1[] PROGMEM = {
   NOTE_A4,  EIGHTH_NOTE,
   NOTE_E5,  EIGHTH_NOTE,
 
-  0,0
+  MUSIC_END
 };
 
-const uint16_t* const wintergatan__marble_machine[] PROGMEM = {
+const uint8_t* const wintergatan__marble_machine[] PROGMEM = {
   wintergatan__marble_machine__voice_1,
   music_sheet_end
 };

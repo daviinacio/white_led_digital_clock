@@ -7,7 +7,7 @@
 
 class MusicPlayer : public Thread, protected MusicHelper {
 protected:
-  const uint16_t* const* music;
+  const uint8_t* const* music;
   MusicVoicePlayer* voice_players[BZ_MAX_VOICES];
 
   void update_interval() override {
@@ -33,11 +33,11 @@ public:
     set_tunning_a4();
   }
 
-  const uint16_t* const* getCurrentMusic(){
+  const uint8_t* const* getCurrentMusic(){
     return music;
   }
 
-  void playSync(const uint16_t* const* _music, int8_t _octave = 0){
+  void playSync(const uint8_t* const* _music, int8_t _octave = 0){
     play(_music, _octave);
     while(enabled)
       if(shouldRun(millis()))
@@ -45,7 +45,7 @@ public:
   }
 
 
-  void play(const uint16_t* const* _music, int8_t _octave_shift = 0){
+  void play(const uint8_t* const* _music, int8_t _octave_shift = 0){
     enabled = true;
     octave_shift = _octave_shift;
     
@@ -53,7 +53,7 @@ public:
     music = _music;
 
     for (uint8_t i = 0; i < BZ_MAX_VOICES; i++) {
-      const uint16_t* voice_pointer = (const uint16_t*) pgm_read_ptr(&_music[i]);
+      const uint8_t* voice_pointer = (const uint8_t*) pgm_read_ptr(&_music[i]);
       if(voice_pointer == music_sheet_end) break;
       voice_players[i]->setup(voice_pointer);
     }

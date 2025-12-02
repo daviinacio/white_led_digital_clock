@@ -1,6 +1,6 @@
 #include "assets/music/base.h"
 
-const uint16_t microsoft__windows_xp_shutdown__right_hand[] PROGMEM = {
+const uint8_t microsoft__windows_xp_shutdown__right_hand[] PROGMEM = {
   MUSIC_BPM,    120,
   MUSIC_BEATS,  4,
 
@@ -10,19 +10,19 @@ const uint16_t microsoft__windows_xp_shutdown__right_hand[] PROGMEM = {
   NOTE_As4,  EIGHTH_NOTE_TIE,
   NOTE_As4,  EIGHTH_NOTE,
 
-  0,0
+  MUSIC_END
 };
 
-const uint16_t microsoft__windows_xp_shutdown__left_hand[] PROGMEM = {
+const uint8_t microsoft__windows_xp_shutdown__left_hand[] PROGMEM = {
   NOTE_Gs3,  QUARTER_NOTE_DOTTED,
   NOTE_Ds3,  EIGHTH_NOTE_TIE,
   NOTE_Ds3,  EIGHTH_NOTE,
 
-  0,0
+  MUSIC_END
 };
 
 
-const uint16_t* const microsoft__windows_xp_shutdown[] PROGMEM = {
+const uint8_t* const microsoft__windows_xp_shutdown[] PROGMEM = {
   microsoft__windows_xp_shutdown__right_hand,
   microsoft__windows_xp_shutdown__left_hand,
   music_sheet_end
