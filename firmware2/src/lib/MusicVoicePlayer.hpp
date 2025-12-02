@@ -18,7 +18,8 @@
 class RepeatNotation {
 public:
   uint16_t start_position = 0;
-  uint8_t  count = 0;
+  uint8_t count = 0;
+  uint8_t current = 0;
 };
 
 class MusicVoicePlayer {
@@ -114,17 +115,46 @@ public:
       helper->set_beats(next_content_node());
       run_loop();
     }
+    else if(node == REPEAT_ENDING){
+      RepeatNotation* repeat = repeats[repeat_level -1];
+      uint8_t temp_repeat_level = repeat_level;
+      while(true){
+        uint8_t node = next_content_node();
+
+        if(node == MUSIC_END){
+          revert_content_cursor();
+          return run_loop();
+        }
+
+        bool is_at_initial_level = temp_repeat_level == repeat_level;
+
+        if(node == REPEAT_START)
+          temp_repeat_level++;
+        else if(node == REPEAT_END && !is_at_initial_level)
+          temp_repeat_level--;
+        else if(node == REPEAT_END){
+          revert_content_cursor();
+          return run_loop();
+        }
+        else if(node == repeat->current && is_at_initial_level){
+          return run_loop();
+        }
+      };
+    }
     else if(node == REPEAT_START){
       repeats[repeat_level]->count = next_content_node();
       repeats[repeat_level]->start_position = content_cursor;
+      repeats[repeat_level]->current = 1;
       repeat_level++;
       run_loop();
     }
     else if(node == REPEAT_END){
       if(repeat_level <= 0) return run_loop();
-      repeats[repeat_level -1]->count--;
-      if(repeats[repeat_level -1]->count > 0)
-        content_cursor = repeats[repeat_level -1]->start_position;
+      RepeatNotation* repeat = repeats[repeat_level -1];
+      if(repeat->current < repeat->count){
+        content_cursor = repeat->start_position;
+        repeat->current++;
+      }
       else
         repeat_level--;
       run_loop();

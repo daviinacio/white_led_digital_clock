@@ -8,11 +8,12 @@ static const uint8_t music_sheet_end[] PROGMEM {};
 
 // Metadata
 #define MUSIC_END 0
-#define MUSIC_BPM 10
-#define MUSIC_BEATS 11
+#define MUSIC_BPM 20
+#define MUSIC_BEATS 21
 
 #define REPEAT_START 30
 #define REPEAT_END 31
+#define REPEAT_ENDING 32
 
 // Note modifiers
 #define TIE     40
