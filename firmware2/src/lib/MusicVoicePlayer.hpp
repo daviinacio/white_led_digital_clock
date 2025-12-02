@@ -5,6 +5,7 @@
 #include "drivers/Buzzer.hpp"
 
 #define NOTE_GAP_LOOPS 2
+#define MAX_REPEAT_LEVELS 5
 
 #ifndef WLDC_MUSIC_VOICE_PLAYER_H
 #define WLDC_MUSIC_VOICE_PLAYER_H
@@ -14,6 +15,12 @@
 //     virtual void on_player_finished() = 0;
 // };
 
+class RepeatNotation {
+public:
+  uint16_t start_position = 0;
+  uint8_t  count = 0;
+};
+
 class MusicVoicePlayer {
 protected:
   MusicHelper* helper;
@@ -22,8 +29,8 @@ protected:
   const uint8_t* content_pointer = nullptr;
   uint8_t voice_index = 0;
   uint8_t remaining_timing_loops = 0;
-  uint16_t repeat_start_position = 0;
-  uint16_t repeat_count = 0;
+  RepeatNotation* repeats[MAX_REPEAT_LEVELS];
+  uint8_t repeat_level = 0;
   bool has_gap = false;
 
   uint8_t next_content_node(){
@@ -45,6 +52,8 @@ public:
   MusicVoicePlayer(MusicHelper* _helper, uint8_t _voice_index){
     this->helper = _helper;
     this->voice_index = _voice_index;
+    for (size_t i = 0; i < MAX_REPEAT_LEVELS; i++)
+      repeats[i] = new RepeatNotation();
   }
 
   void setup(const uint8_t* _content_pointer){
@@ -106,14 +115,18 @@ public:
       run_loop();
     }
     else if(node == REPEAT_START){
-      repeat_count = next_content_node();
-      repeat_start_position = content_cursor;
+      repeats[repeat_level]->count = next_content_node();
+      repeats[repeat_level]->start_position = content_cursor;
+      repeat_level++;
       run_loop();
     }
     else if(node == REPEAT_END){
-      repeat_count--;
-      if(repeat_count > 0)
-        content_cursor = repeat_start_position;
+      if(repeat_level <= 0) return run_loop();
+      repeats[repeat_level -1]->count--;
+      if(repeats[repeat_level -1]->count > 0)
+        content_cursor = repeats[repeat_level -1]->start_position;
+      else
+        repeat_level--;
       run_loop();
     }
     else if(node == MUSIC_END){
