@@ -3,15 +3,15 @@
 #define WHOLE_NOTE_TIMING_LOOPS 64
 class MusicHelper {
 protected:
-  uint8_t tunning;
+  double tunning_a4 = 440.0;
   uint8_t bpm;
   uint8_t beats = 4;
   int8_t octave_shift = 0;
+  int8_t transpose_shift = 0;
 
   double reference_note_frequencies[12];
 
   double calc_frequency_octave(double frequency_hz, double octave_shift){
-    // return frequency_hz;
     if(octave_shift == 0) return frequency_hz;
     else if(octave_shift > 0) return frequency_hz * (pow(2, abs(octave_shift)));
     else return frequency_hz / (pow(2, abs(octave_shift)));
@@ -28,9 +28,11 @@ protected:
 public:
   virtual void on_player_finished() = 0;
 
-  void set_tunning_a4(double a4 = 440.0){
+  void set_tunning_a4(double a4 = 440.0, uint8_t _transpose_shift = 0){
+    tunning_a4 = a4;
+    transpose_shift = _transpose_shift;
     for (int n = 0; n < 12; ++n){
-      reference_note_frequencies[n] = a4 * pow(2.0, n / 12.0);
+      reference_note_frequencies[n] = a4 * pow(2.0, (n + transpose_shift) / 12.0);
     }
   };
 

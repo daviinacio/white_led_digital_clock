@@ -14,7 +14,8 @@ class MusicScreen : public Screen {
 protected:
   uint8_t cursor = 0;
   uint8_t music_index = 0;
-  int8_t octave = 0;
+  int8_t octave_shift = 0;
+  int8_t transpose_shift = 0;
 
 public:
   MusicScreen() : Screen(WLDC_SCREEN_MUSIC, DISP_BRINK_INTERVAL) { }
@@ -39,7 +40,11 @@ public:
     }
     else if(cursor == 1){
       display.print(F("OC"));
-      display.printEnd(octave);
+      display.printEnd(octave_shift);
+    }
+    else if(cursor == 2){
+      display.print(F("TP"));
+      display.printEnd(transpose_shift);
     }
   }
 
@@ -60,7 +65,7 @@ public:
         if(player.enabled)
           player.pause();
         else {
-          player.play(music_list[music_index], octave);
+          player.play(music_list[music_index], octave_shift, transpose_shift);
         }
       }
       else if(key == KEY_VALUE_DOWN) {
@@ -69,18 +74,26 @@ public:
     }
     else if(cursor == 1){
       if(key == KEY_VALUE_UP){
-        increment(octave, -4, 4, false);
+        increment(octave_shift, -4, 4, false);
       }
       else if(key == KEY_VALUE_DOWN) {
-        decrement(octave, -4, 4, false);
+        decrement(octave_shift, -4, 4, false);
+      }
+    }
+    else if(cursor == 2){
+      if(key == KEY_VALUE_UP){
+        increment(transpose_shift, -4, 4, false);
+      }
+      else if(key == KEY_VALUE_DOWN) {
+        decrement(transpose_shift, -4, 4, false);
       }
     }
     
     if(key == KEY_FUNC_LEFT){
-      decrement(cursor, 0, 1, false);
+      decrement(cursor, 0, 2, false);
     }
     else if(key == KEY_FUNC_RIGHT){
-      increment(cursor, 0, 1, false);
+      increment(cursor, 0, 2, false);
     }
 
     render();

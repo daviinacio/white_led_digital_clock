@@ -27,7 +27,7 @@ static const uint8_t tv_show__stranger_things_theme__right_hand[] PROGMEM = {
   NOTE_C3,  SIXTEENTH_NOTE,
   NOTE_B2,  SIXTEENTH_NOTE,
   NOTE_G2,  SIXTEENTH_NOTE,
-  NOTE_E2,  EIGHTH_NOTE,
+  NOTE_E2,  EIGHTH_NOTE_TIE,
   NOTE_E2,  HALF_NOTE,
 
   MUSIC_END
@@ -65,7 +65,7 @@ static const uint8_t tv_show__stranger_things_theme__left_hand[] PROGMEM = {
   SIXTEENTH_REST,
   NOTE_B1,  EIGHTH_NOTE_TIE,
 
-  NOTE_B1,  WHOLE_NOTE_TIE,
+  NOTE_B1,  WHOLE_NOTE,
 
   WHOLE_REST,
 
@@ -73,11 +73,12 @@ static const uint8_t tv_show__stranger_things_theme__left_hand[] PROGMEM = {
 
   // 15
   NOTE_G3,  QUARTER_NOTE,
-  NOTE_E3,  HALF_NOTE_DOTTED,
+  NOTE_E3,  HALF_NOTE_DOTTED_TIE,
 
   NOTE_E3,  HALF_NOTE,
   NOTE_D4,  QUARTER_NOTE,
-  NOTE_B2,  QUARTER_NOTE_TIE,
+  NOTE_B2,  EIGHTH_NOTE,
+  NOTE_B2,  EIGHTH_NOTE_TIE,
 
   NOTE_B2,  WHOLE_NOTE,
 

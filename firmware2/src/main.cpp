@@ -68,7 +68,6 @@ void setup() {
   rtc.begin();
   dht.begin();
   display.begin();
-  player.begin();
   buzzer.begin();
 
   panel.addEventListener(&screen_controller);

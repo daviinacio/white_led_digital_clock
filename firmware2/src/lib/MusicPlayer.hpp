@@ -5,7 +5,7 @@
 #ifndef WLDC_MUSIC_PLAYER_H
 #define WLDC_MUSIC_PLAYER_H
 
-class MusicPlayer : public Thread, protected MusicHelper {
+class MusicPlayer : public Thread, public MusicHelper {
 protected:
   const uint8_t* const* music;
   MusicVoicePlayer* voice_players[BZ_MAX_VOICES];
@@ -29,10 +29,6 @@ public:
     }
   }
 
-  void begin(){
-    set_tunning_a4();
-  }
-
   const uint8_t* const* getCurrentMusic(){
     return music;
   }
@@ -45,16 +41,26 @@ public:
   }
 
 
-  void play(const uint8_t* const* _music, int8_t _octave_shift = 0){
+  void play(const uint8_t* const* _music, int8_t _octave_shift = 0, int8_t _transpose_shift = 0){
     enabled = true;
     octave_shift = _octave_shift;
+    set_tunning_a4(tunning_a4, _transpose_shift);
     
     if(music == _music) return;
     music = _music;
 
+    bool voice_remaining = true;
     for (uint8_t i = 0; i < BZ_MAX_VOICES; i++) {
+      voice_players[i]->active = false;
+
+      if(!voice_remaining) continue;
       const uint8_t* voice_pointer = (const uint8_t*) pgm_read_ptr(&_music[i]);
-      if(voice_pointer == music_sheet_end) break;
+      
+      if(voice_pointer == music_sheet_end){
+        voice_remaining = false;
+        continue;
+      }
+
       voice_players[i]->setup(voice_pointer);
     }
   }
