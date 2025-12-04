@@ -1,6 +1,5 @@
 #include "assets/music/base.h"
 
-#define WHOLE_NOTE_TIMING_LOOPS 64
 class MusicHelper {
 protected:
   double tunning_a4 = 440.0;
@@ -50,21 +49,21 @@ public:
     return calc_frequency_octave(get_oct4_note_frequency(note_symbol), (octave + octave_shift) - 4);
   }
 
-  uint8_t get_timing_loops(uint8_t timing){
-         if(timing ==                WHOLE_NOTE) return WHOLE_NOTE_TIMING_LOOPS;
-    else if(timing ==                 HALF_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 2;
-    else if(timing ==              QUARTER_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 4;
-    else if(timing ==               EIGHTH_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 8;
-    else if(timing ==            SIXTEENTH_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 16;
-    else if(timing ==        THIRTY_SECOND_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 32;
-    else if(timing ==         SIXTY_FOURTH_NOTE) return WHOLE_NOTE_TIMING_LOOPS / 64;
-    else if(timing ==         WHOLE_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS     ) * 1.5;
-    else if(timing ==          HALF_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS /  2) * 1.5;
-    else if(timing ==       QUARTER_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS /  4) * 1.5;
-    else if(timing ==        EIGHTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS /  8) * 1.5;
-    else if(timing ==     SIXTEENTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS / 16) * 1.5;
-    else if(timing == THIRTY_SECOND_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS / 32) * 1.5;
-    else if(timing ==  SIXTY_FOURTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_LOOPS / 64) * 1.5;
+  uint8_t get_timing_ticks(uint8_t timing){
+         if(timing ==                WHOLE_NOTE) return WHOLE_NOTE_TIMING_TICKS;
+    else if(timing ==                 HALF_NOTE) return WHOLE_NOTE_TIMING_TICKS / 2;
+    else if(timing ==              QUARTER_NOTE) return WHOLE_NOTE_TIMING_TICKS / 4;
+    else if(timing ==               EIGHTH_NOTE) return WHOLE_NOTE_TIMING_TICKS / 8;
+    else if(timing ==            SIXTEENTH_NOTE) return WHOLE_NOTE_TIMING_TICKS / 16;
+    else if(timing ==        THIRTY_SECOND_NOTE) return WHOLE_NOTE_TIMING_TICKS / 32;
+    else if(timing ==         SIXTY_FOURTH_NOTE) return WHOLE_NOTE_TIMING_TICKS / 64;
+    else if(timing ==         WHOLE_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_TICKS     ) * 1.5;
+    else if(timing ==          HALF_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_TICKS /  2) * 1.5;
+    else if(timing ==       QUARTER_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_TICKS /  4) * 1.5;
+    else if(timing ==        EIGHTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_TICKS /  8) * 1.5;
+    else if(timing ==     SIXTEENTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_TICKS / 16) * 1.5;
+    else if(timing == THIRTY_SECOND_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_TICKS / 32) * 1.5;
+    else if(timing ==  SIXTY_FOURTH_NOTE_DOTTED) return (WHOLE_NOTE_TIMING_TICKS / 64) * 1.5;
     else return 0;
   }
 
@@ -84,7 +83,7 @@ public:
     return node == TIE || node == SLUR;
   }
 
-  bool is_valid_octave(uint8_t node){
-    return node >= 1 && node <= 8;
+  bool is_valid_value(uint8_t node){
+    return node >= MUSIC_MIN_VALUE && node <= MUSIC_MAX_VALUE;
   }
 };

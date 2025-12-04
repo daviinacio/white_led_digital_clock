@@ -4,3 +4,6 @@
 #include "assets/music/wintergatan/marble_machine.hpp"
 #include "assets/music/microsoft/windows_xp_shutdown.hpp"
 #include "assets/music/tv_show/stranger_things_theme.hpp"
+#include "assets/music/portal/still_alive.hpp"
+#include "assets/music/debug/repeat.hpp"
+#include "assets/music/debug/slur.hpp"

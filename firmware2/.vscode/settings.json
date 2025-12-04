@@ -10,7 +10,10 @@
     ".vscode": true
   },
   "cSpell.words": [
+    "adafruit",
+    "arduino",
     "ATMEGA",
+    "Clib",
     "COMPA",
     "COMPB",
     "CONFIGURACAO",

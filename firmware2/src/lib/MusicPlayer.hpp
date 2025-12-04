@@ -11,7 +11,7 @@ protected:
   MusicVoicePlayer* voice_players[BZ_MAX_VOICES];
 
   void update_interval() override {
-    setInterval(((60000.0 / bpm) * beats) / WHOLE_NOTE_TIMING_LOOPS);
+    setInterval(((60000.0 / bpm) * beats) / WHOLE_NOTE_TIMING_TICKS);
   }
 
   void on_player_finished() override {
@@ -35,9 +35,14 @@ public:
 
   void playSync(const uint8_t* const* _music, int8_t _octave = 0){
     play(_music, _octave);
-    while(enabled)
+    while(enabled){
       if(shouldRun(millis()))
         run();
+
+      while(panel.readInput() != InputKey::KEY_DEFAULT){
+        buzzer.mute();
+      }
+    }
   }
 
 
@@ -77,8 +82,30 @@ public:
 
   void run() override {
     for(int i = 0; i < BZ_MAX_VOICES; i++)
-      voice_players[i]->run_loop();
+      voice_players[i]->run_tick();
     return Thread::run();
+  }
+
+  uint16_t calc_music_duration_in_seconds(const uint8_t* const* _music){
+    uint16_t cursor = 0;
+    uint16_t total_ticks = 0;
+    uint8_t bpm = 0;
+    uint8_t beats = 0;
+
+    while(true){
+      uint8_t node = pgm_read_word(&_music[cursor++]);
+
+      if(node == MUSIC_END)
+        break;
+      else if(is_timing(node))
+        total_ticks += get_timing_ticks(node);
+      else if(node == MUSIC_BPM)
+        bpm = pgm_read_word(&_music[cursor++]);
+      else if(node == MUSIC_BEATS)
+        beats = pgm_read_word(&_music[cursor++]);
+    }
+    
+    return (total_ticks / WHOLE_NOTE_TIMING_TICKS) * ((60000.0 / bpm) * beats);
   }
 };
 

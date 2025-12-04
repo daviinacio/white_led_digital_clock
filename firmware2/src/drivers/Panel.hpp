@@ -14,12 +14,13 @@
 class AnalogPanel : public Input {
 protected:
   unsigned short pin;
-  InputKey readInput() override;
 
 public:
   AnalogPanel(unsigned short _pin);
   AnalogPanel(unsigned short _pin, unsigned long _interval);
   AnalogPanel(unsigned short _pin, unsigned long _interval, unsigned short _cooldown);
+
+  InputKey readInput() override;
 };
 
 // Implementation

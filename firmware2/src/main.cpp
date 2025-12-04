@@ -73,7 +73,7 @@ void setup() {
   panel.addEventListener(&screen_controller);
   panel.onKeyPress(key_press);
 
-  // player.playSync(tv_show__stranger_things_theme);
+  player.playSync(debug__slur);
 
   // Boot screen
   display.enable();

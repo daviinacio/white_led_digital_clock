@@ -50,8 +50,10 @@ static const uint8_t tv_show__stranger_things_theme__left_hand[] PROGMEM = {
   // 5
   WHOLE_REST,
 
-  NOTE_E2,  QUARTER_NOTE,
-  NOTE_G4,  HALF_NOTE_DOTTED,
+  NOTE_E2,  QUARTER_NOTE_TIE,
+  NOTE_E2,  EIGHTH_NOTE_SLUR,
+  NOTE_G4,  EIGHTH_NOTE_TIE,
+  NOTE_G4,  HALF_NOTE,
 
   HALF_REST_DOTTED,
   NOTE_D2,  QUARTER_NOTE,
