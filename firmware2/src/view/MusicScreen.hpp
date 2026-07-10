@@ -2,11 +2,13 @@
 
 const uint8_t* const* music_list[] = {
   gta_sa__theme,
-  daviinacio_void,
+  // daviinacio_void,
+  starwars_cantina,
+  gravity_falls_main_theme,
   portal_still_alive_acoccimi,
   sebastian_bach__bourree,
-  tv_show__stranger_things_theme,
-  marble_machine_piano_version_martin_molin,
+  // tv_show__stranger_things_theme,
+  // marble_machine_piano_version_martin_molin,
   undertale_megalovania,
   super_mario_world_overworld,
   // sonic_greenhill

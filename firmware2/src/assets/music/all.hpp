@@ -13,3 +13,5 @@
 #include "assets/music/fx/rest0003.hpp"
 #include "assets/music/fx/open0016.hpp"
 #include "assets/music/fx/wakeup0012.hpp"
+#include "assets/music/gravity_falls/gravity_falls_main_theme.hpp"
+#include "assets/music/starwars/starwars_cantina.hpp"
