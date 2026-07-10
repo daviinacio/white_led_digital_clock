@@ -33,7 +33,8 @@
     "TIMSK",
     "vect",
     "wintergatan",
-    "WLDC"
+    "WLDC",
+    "xmas"
   ],
   "C_Cpp.errorSquiggles": "enabled",
   "files.associations": {

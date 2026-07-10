@@ -1,11 +1,15 @@
 #include "lib/Screen.h"
 
 const uint8_t* const* music_list[] = {
+  gta_sa__theme,
+  daviinacio_void,
+  portal_still_alive_acoccimi,
   sebastian_bach__bourree,
   tv_show__stranger_things_theme,
-  coca_cola__theme,
-  unknown__la_cucaracha,
-  microsoft__windows_xp_shutdown
+  marble_machine_piano_version_martin_molin,
+  undertale_megalovania,
+  super_mario_world_overworld,
+  // sonic_greenhill
 };
 
 size_t music_list_length = sizeof(music_list) / sizeof(music_list[0]);
@@ -53,7 +57,7 @@ public:
       if(display.isScrolling())
         navigate(WLDC_SCREEN_ADJUST_CLOCK);
       else
-        navigate(1);
+        navigate(WLDC_SCREEN_HOME);
     }
   }
 

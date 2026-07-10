@@ -1,0 +1,85 @@
+#include "assets/music/base.h"
+
+static const uint8_t gta_sa__theme__voice_1[] PROGMEM = {
+  MUSIC_BPM,    98,
+  MUSIC_BEATS,  4,
+
+  HALF_REST,
+
+  EIGHTH_REST,
+  NOTE_G4,  EIGHTH_NOTE,
+
+  REPEAT_START, 4,
+    
+    NOTE_G5,  EIGHTH_NOTE,
+    NOTE_Ds5, EIGHTH_NOTE,
+    NOTE_D5,  SIXTEENTH_NOTE_SLUR,
+    NOTE_Ds5, SIXTEENTH_NOTE_SLUR,
+    NOTE_D5,  SIXTEENTH_NOTE,
+    NOTE_C5,  SIXTEENTH_NOTE,
+    NOTE_D5,  EIGHTH_NOTE,
+    NOTE_D5,  EIGHTH_NOTE,
+
+    EIGHTH_REST,
+    NOTE_Bb4, EIGHTH_NOTE,
+    NOTE_C5,  SIXTEENTH_NOTE,
+    NOTE_Bb4, SIXTEENTH_NOTE,
+    NOTE_C5,  EIGHTH_NOTE,
+    NOTE_D5,  EIGHTH_NOTE,
+    NOTE_G4,  EIGHTH_NOTE,
+    NOTE_C5,  EIGHTH_NOTE,
+    NOTE_Bb4, SIXTEENTH_NOTE,
+    NOTE_G4,  EIGHTH_NOTE,
+
+    SIXTEENTH_REST,
+
+    REPEAT_ENDING, 1, 3,
+    EIGHTH_REST,
+
+    REPEAT_ENDING, 2,
+    NOTE_G4,  EIGHTH_NOTE,
+
+  REPEAT_END,
+
+  MUSIC_END
+};
+
+static const uint8_t gta_sa__theme__voice_2[] PROGMEM = {
+  MUSIC_BPM,    98,
+  MUSIC_BEATS,  4,
+  
+  REPEAT_START, 4,
+
+    EIGHTH_REST,
+    NOTE_Bb2, QUARTER_NOTE,
+    NOTE_Ab3, EIGHTH_NOTE,
+    NOTE_G3,  EIGHTH_NOTE,
+    NOTE_Ds3, EIGHTH_NOTE,
+    NOTE_F2,  EIGHTH_NOTE,
+    NOTE_G2,  EIGHTH_NOTE_TIE,
+
+    NOTE_G2,  QUARTER_NOTE_TIE,
+    NOTE_G2,  SIXTEENTH_NOTE_DOTTED,
+    SIXTEENTH_REST_DOTTED,
+    NOTE_G2,  SIXTEENTH_NOTE,
+    NOTE_G2,  SIXTEENTH_NOTE,
+    EIGHTH_REST,
+    SIXTEENTH_REST,
+    QUARTER_REST,
+
+  REPEAT_END,
+
+  EIGHTH_REST,
+  NOTE_Bb2, QUARTER_NOTE,
+  NOTE_Ab3, EIGHTH_NOTE,
+  NOTE_G3,  EIGHTH_NOTE,
+
+  MUSIC_END
+};
+
+
+const uint8_t* const gta_sa__theme[] PROGMEM = {
+  gta_sa__theme__voice_1,
+  gta_sa__theme__voice_2,
+  music_sheet_end
+};

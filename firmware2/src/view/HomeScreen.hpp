@@ -52,7 +52,8 @@ public:
   void keyUp(InputKey key, unsigned int milliseconds) override {
     if(key == KEY_HOME){
       if(cursor == 0)
-        navigate(WLDC_SCREEN_CHRONOMETER);
+        // navigate(WLDC_SCREEN_CHRONOMETER);
+        navigate(WLDC_SCREEN_POMODORO);
 
       cursor = 0;
       render();

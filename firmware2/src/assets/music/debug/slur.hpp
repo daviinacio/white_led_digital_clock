@@ -1,4 +1,4 @@
-#include "assets/music/base.h"
+#include "assets/music/base.h"  
 
 static const uint8_t debug__slur__voice_1[] PROGMEM = {
   MUSIC_BPM,    120,
@@ -8,14 +8,12 @@ static const uint8_t debug__slur__voice_1[] PROGMEM = {
 
   NOTE_A3,  EIGHTH_NOTE_SLUR,
 
-  REPEAT_START, 12,
+  REPEAT_START, 16,
 
     NOTE_A3, SIXTEENTH_NOTE_SLUR,
     NOTE_A5, SIXTEENTH_NOTE_SLUR,
 
   REPEAT_END,
-
-  // ...
 
   MUSIC_END
 };

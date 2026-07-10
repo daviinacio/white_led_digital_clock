@@ -1,0 +1,25 @@
+#include "assets/music/base.h"
+
+static const uint8_t fx_alarm0015__voice_1[] PROGMEM = {
+  MUSIC_BPM,    96,
+  MUSIC_BEATS,  4,
+  SIXTY_FOURTH_REST,
+  NOTE_C7,  SIXTY_FOURTH_NOTE,
+  SIXTY_FOURTH_REST,
+  NOTE_C7,  SIXTY_FOURTH_NOTE,
+  THIRTY_SECOND_REST,
+  NOTE_C7,  SIXTY_FOURTH_NOTE,
+  THIRTY_SECOND_REST,
+  NOTE_C7,  SIXTY_FOURTH_NOTE,
+  SIXTY_FOURTH_REST,
+  NOTE_C7,  SIXTY_FOURTH_NOTE,
+  THIRTY_SECOND_REST,
+  NOTE_C7,  SIXTY_FOURTH_NOTE,
+  MUSIC_END
+};
+
+
+const uint8_t* const fx_alarm0015[] PROGMEM = {
+  fx_alarm0015__voice_1,
+  music_sheet_end
+};

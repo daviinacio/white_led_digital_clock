@@ -44,7 +44,7 @@ public:
       if(display.isScrolling())
         navigate(WLDC_SCREEN_BRIGHTNESS);
       else
-        navigate(1);
+        navigate(WLDC_SCREEN_HOME);
     }
   }
 

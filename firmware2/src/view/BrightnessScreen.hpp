@@ -24,7 +24,7 @@ public:
       if(display.isScrolling())
         navigate(WLDC_SCREEN_MUSIC);
       else
-        navigate(1);
+        navigate(WLDC_SCREEN_HOME);
     }
   }
 

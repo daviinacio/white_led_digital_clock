@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #ifndef WLDC_MUSIC_BASE_H
 #define WLDC_MUSIC_BASE_H
 
@@ -5,7 +6,7 @@ static const uint8_t music_sheet_end[] PROGMEM {};
 
 #endif
 
-#define WHOLE_NOTE_TIMING_TICKS 64
+#define WHOLE_NOTE_TIMING_TICKS 128
 
 
 // Metadata

@@ -33,6 +33,7 @@
 #include "view/AdjustClockScreen.hpp"
 #include "view/BrightnessScreen.hpp"
 #include "view/MusicScreen.hpp"
+#include "view/PomodoroScreen.hpp"
 
 ThreadController cpu;
 ScreenController screen_controller;
@@ -42,6 +43,7 @@ ChronometerScreen chronometer_screen;
 AdjustClockScreen adjust_clock_screen;
 BrightnessScreen brightness_screen;
 MusicScreen music_screen;
+PomodoroScreen pomodoro_screen;
 
 void key_press(InputKey key, unsigned int milliseconds);
 
@@ -51,7 +53,6 @@ void setup() {
   // cpu.add(&dht);
   cpu.add(&panel);
   cpu.add(&player);
-  // cpu.add(&buzzer);
 
   // Screens
   screen_controller.add(&home_screen);
@@ -59,14 +60,16 @@ void setup() {
   screen_controller.add(&brightness_screen);
   screen_controller.add(&adjust_clock_screen);
   screen_controller.add(&music_screen);
+  screen_controller.add(&pomodoro_screen);
 
   // Screen Threads
   cpu.add(&chronometer_screen);
+  cpu.add(&pomodoro_screen);
   cpu.add(&screen_controller);
 
   // Driver Begins
   rtc.begin();
-  dht.begin();
+  // dht.begin();
   display.begin();
   buzzer.begin();
 
@@ -80,12 +83,11 @@ void setup() {
   display.print(WLDC_SPLASH_TEXT);
   delay(WLDC_SETUP_DELAY);
 
-  screen_controller.navigate(WLDC_SCREEN_MUSIC);
+  screen_controller.navigate(WLDC_SCREEN_HOME);
 }
 
 void loop() {
   cpu.run();
-  // buzzer.run();
 }
 
 void key_press(InputKey key, unsigned int milliseconds){

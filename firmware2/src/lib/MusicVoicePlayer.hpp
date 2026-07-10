@@ -60,53 +60,8 @@ protected:
     content_cursor--;
   }
 
-  uint8_t next_note_symbol(){
-    for(uint16_t i = 0; true; i++){
-      uint8_t node = pgm_read_word(&content_pointer[content_cursor + i]);
-
-      if(helper->is_note_symbol(node))
-        return node;
-      else if(node == MUSIC_END)
-        return 0;
-    }
-  }
-
-  uint8_t next_note_octave(){
-    for(uint16_t i = 0; true; i++){
-      uint8_t node = pgm_read_word(&content_pointer[content_cursor + i]);
-
-      if(helper->is_note_symbol(node))
-        return pgm_read_word(&content_pointer[content_cursor + i + 1]);
-      else if(node == MUSIC_END)
-        return 0;
-    }
-  }
-
-  uint8_t next_rest(){
-    while(true){
-      uint8_t node = next_content_node();
-      if(helper->is_rest(node))
-        return node;
-    }
-  }
-
-  uint8_t next_timing(){
-    while(true){
-      uint8_t node = next_content_node();
-      if(helper->is_timing(node))
-        return node;
-    }
-  }
-
-  uint8_t next_value(){
-    while(true){
-      uint8_t node = next_content_node();
-      if(helper->is_valid_value(node))
-        return node;
-    }
-  }
-
   void on_finished(){
+    buzzer.mute(voice_index);
     this->active = false;
     helper->on_player_finished();
   }

@@ -172,7 +172,7 @@ public:
           hour, minute, 0
         ));
         display.printScroll(F("SAVE"), 1500);
-        navigate(1);
+        navigate(WLDC_SCREEN_HOME);
       }
     }
   }
