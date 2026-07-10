@@ -1,6 +1,6 @@
 #include "assets/music/base.h"
 
-static const uint8_t portal_still_alive_acoccimi__voice_1[] PROGMEM = {
+static const uint8_t portal_still_alive__voice_1[] PROGMEM = {
   MUSIC_BPM,    120,
   MUSIC_BEATS,  4,
   HALF_REST,
@@ -403,7 +403,7 @@ static const uint8_t portal_still_alive_acoccimi__voice_1[] PROGMEM = {
   MUSIC_END
 };
 
-static const uint8_t portal_still_alive_acoccimi__voice_2[] PROGMEM = {
+static const uint8_t portal_still_alive__voice_2[] PROGMEM = {
   WHOLE_REST,
   REPEAT_START, 3,
     REPEAT_START, 4,
@@ -594,8 +594,8 @@ static const uint8_t portal_still_alive_acoccimi__voice_2[] PROGMEM = {
 };
 
 
-const uint8_t* const portal_still_alive_acoccimi[] PROGMEM = {
-  portal_still_alive_acoccimi__voice_1,
-  portal_still_alive_acoccimi__voice_2,
+const uint8_t* const portal_still_alive[] PROGMEM = {
+  portal_still_alive__voice_1,
+  portal_still_alive__voice_2,
   music_sheet_end
 };

@@ -2,16 +2,14 @@
 
 const uint8_t* const* music_list[] = {
   gta_sa__theme,
-  // daviinacio_void,
   starwars_cantina,
   gravity_falls_main_theme,
-  portal_still_alive_acoccimi,
-  sebastian_bach__bourree,
-  // tv_show__stranger_things_theme,
-  // marble_machine_piano_version_martin_molin,
+  portal_still_alive,
   undertale_megalovania,
   super_mario_world_overworld,
-  // sonic_greenhill
+  sonic_greenhill,
+  sebastian_bach__bourree,
+  tv_show__stranger_things_theme
 };
 
 size_t music_list_length = sizeof(music_list) / sizeof(music_list[0]);
