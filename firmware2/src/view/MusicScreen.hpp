@@ -4,6 +4,7 @@ const uint8_t* const* music_list[] = {
   gta_sa__theme,
   starwars_cantina,
   gravity_falls_main_theme,
+  pirates_of_the_caribbean_hes_a_pirate,
   portal_still_alive,
   undertale_megalovania,
   super_mario_world_overworld,

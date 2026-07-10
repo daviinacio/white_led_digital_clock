@@ -15,3 +15,4 @@
 #include "assets/music/fx/wakeup0012.hpp"
 #include "assets/music/gravity_falls/gravity_falls_main_theme.hpp"
 #include "assets/music/starwars/starwars_cantina.hpp"
+#include "assets/music/pirates_of_the_caribbean/pirates_of_the_caribbean_hes_a_pirate.hpp"
